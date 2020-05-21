@@ -197,6 +197,7 @@ NUMERIC_DATE_TYPES(COMPARE_SIX_VALUES, least, <)
 
 CAST_UNARY(castBIGINT, int32, int64)
 CAST_UNARY(castINT, int64, int32)
+CAST_UNARY(castINT, date32, int32)
 CAST_UNARY(castFLOAT4, int32, float32)
 CAST_UNARY(castFLOAT4, int64, float32)
 CAST_UNARY(castFLOAT8, int32, float64)
