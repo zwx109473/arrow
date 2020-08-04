@@ -44,6 +44,9 @@ std::vector<NativeFunction> GetArithmeticFunctionRegistry() {
       UNARY_SAFE_NULL_IF_NULL(castINT, {}, date32, int32),
       UNARY_SAFE_NULL_IF_NULL(castINT, {}, float32, int32),
       UNARY_SAFE_NULL_IF_NULL(castINT, {}, float64, int32),
+      UNARY_SAFE_NULL_IF_NULL(castBYTE, {}, int16, int8),
+      UNARY_SAFE_NULL_IF_NULL(castBYTE, {}, int32, int8),
+      UNARY_SAFE_NULL_IF_NULL(castBYTE, {}, int64, int8),
       UNARY_SAFE_NULL_IF_NULL(castBIGINT, {}, decimal128, int64),
 
       // cast to float32

@@ -206,6 +206,20 @@ gdv_timestamp castTIMESTAMP_int64(gdv_int64);
 gdv_date64 castDATE_timestamp(gdv_timestamp);
 const char* castVARCHAR_timestamp_int64(int64_t, gdv_timestamp, gdv_int64, gdv_int32*);
 
+const char* castVARCHAR_date32_int64(int64_t, gdv_date32, gdv_int64, gdv_int32*);
+
+const char* castVARCHAR_int8_int64(int64_t, gdv_int8, gdv_int64, gdv_int32*);
+
+const char* castVARCHAR_int16_int64(int64_t, gdv_int16, gdv_int64, gdv_int32*);
+
+const char* castVARCHAR_int32_int64(int64_t, gdv_int32, gdv_int64, gdv_int32*);
+
+const char* castVARCHAR_int64_int64(int64_t, gdv_int64, gdv_int64, gdv_int32*);
+
+const char* castVARCHAR_float32_int64(int64_t, gdv_float32, gdv_int64, gdv_int32*);
+
+const char* castVARCHAR_float64_int64(int64_t, gdv_float64, gdv_int64, gdv_int32*);
+
 gdv_int64 truncate_int64_int32(gdv_int64 in, gdv_int32 out_scale);
 
 const char* substr_utf8_int64_int64(gdv_int64 context, const char* input,

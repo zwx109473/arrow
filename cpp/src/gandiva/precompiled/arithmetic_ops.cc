@@ -18,6 +18,9 @@
 extern "C" {
 
 #include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <cfloat>
 #include "./types.h"
 
 // Expand inner macro for all numeric types.
@@ -119,6 +122,9 @@ CAST_UNARY(castINT, int64, int32)
 CAST_UNARY(castINT, date32, int32)
 CAST_UNARY(castINT, float32, int32)
 CAST_UNARY(castINT, float64, int32)
+CAST_UNARY(castBYTE, int16, int8)
+CAST_UNARY(castBYTE, int32, int8)
+CAST_UNARY(castBYTE, int64, int8)
 CAST_UNARY(castFLOAT4, int32, float32)
 CAST_UNARY(castFLOAT4, int64, float32)
 CAST_UNARY(castFLOAT8, int32, float64)
@@ -127,6 +133,46 @@ CAST_UNARY(castFLOAT8, float32, float64)
 CAST_UNARY(castFLOAT4, float64, float32)
 
 #undef CAST_UNARY
+#define nothing
+#define PRINT(DIGSF, DIGS, FMT) PRINT_##DIGSF(DIGS, FMT)
+#define PRINT_NOFMT(DIGS, FMT) int res = snprintf(char_buffer, length, FMT, in);
+#define PRINT_FMT(DIGS, FMT) int res = snprintf(char_buffer, length, FMT, DIGS, in);
+
+#define CAST_UNARY_UTF8(NAME, IN_TYPE, OUT_TYPE, FMT, DIGSF, DIGS)                       \
+  FORCE_INLINE                                                                           \
+  const char* NAME##_##IN_TYPE##_int64(gdv_int64 context, gdv_##IN_TYPE in,              \
+                                       gdv_int64 length, gdv_int32 * out_len) {          \
+    const int32_t char_buffer_length = length;                                           \
+    char char_buffer[char_buffer_length];                                                \
+    PRINT(DIGSF, DIGS, FMT)                                                              \
+    if (res < 0) {                                                                       \
+      gdv_fn_context_set_error_msg(context, "Could not format the ##IN_TYPE");           \
+      return "";                                                                         \
+    }                                                                                    \
+                                                                                         \
+    *out_len = strlen(char_buffer);                                                      \
+    char* ret = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, *out_len)); \
+    if (ret == nullptr) {                                                                \
+      gdv_fn_context_set_error_msg(context,                                              \
+                                   "Could not allocate memory for output string");       \
+      *out_len = 0;                                                                      \
+      return "";                                                                         \
+    }                                                                                    \
+                                                                                         \
+    memcpy(ret, char_buffer, *out_len);                                                  \
+    return ret;                                                                          \
+  }
+
+CAST_UNARY_UTF8(castVARCHAR, int8, utf8, "%d", NOFMT, nothing)
+CAST_UNARY_UTF8(castVARCHAR, int16, utf8, "%d", NOFMT, nothing)
+CAST_UNARY_UTF8(castVARCHAR, int32, utf8, "%d", NOFMT, nothing)
+CAST_UNARY_UTF8(castVARCHAR, int64, utf8, "%ld", NOFMT, nothing)
+// CAST_UNARY_UTF8(castVARCHAR, float32, utf8, "%.*f", FMT, FLT_DIG)
+// CAST_UNARY_UTF8(castVARCHAR, float64, utf8, "%.*f", FMT, DBL_DIG)
+CAST_UNARY_UTF8(castVARCHAR, float32, utf8, "%g", NOFMT, nothing)
+CAST_UNARY_UTF8(castVARCHAR, float64, utf8, "%g", NOFMT, nothing)
+
+#undef CAST_UNARY_UTF8
 
 // simple nullable functions, result value = fn(input validity)
 #define VALIDITY_OP(NAME, TYPE, OP) \
