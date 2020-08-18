@@ -249,9 +249,7 @@ NUMERIC_BOOL_DATE_FUNCTION(IS_NOT_DISTINCT_FROM)
   FORCE_INLINE                                                                           \
   gdv_##TYPE divide_##TYPE##_##TYPE(gdv_int64 context, gdv_##TYPE in1, gdv_##TYPE in2) { \
     if (in2 == 0) {                                                                      \
-      char const* err_msg = "divide by zero error";                                      \
-      gdv_fn_context_set_error_msg(context, err_msg);                                    \
-      return 0;                                                                          \
+      return static_cast<gdv_##TYPE>(NULL);                                              \
     }                                                                                    \
     return static_cast<gdv_##TYPE>(in1 / in2);                                           \
   }
