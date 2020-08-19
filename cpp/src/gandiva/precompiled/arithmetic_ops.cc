@@ -118,6 +118,7 @@ CAST_UNARY(castBIGINT, int32, int64)
 CAST_UNARY(castBIGINT, date64, int64)
 CAST_UNARY(castBIGINT, float32, int64)
 CAST_UNARY(castBIGINT, float64, int64)
+CAST_UNARY(castINT, int8, int32)
 CAST_UNARY(castINT, int64, int32)
 CAST_UNARY(castINT, date32, int32)
 CAST_UNARY(castINT, float32, int32)
@@ -309,10 +310,10 @@ SHIFT_LEFT_INT(int64, int32)
 
 #undef SHIFT_RIGHT_INT
 
-#define SHIFT_RIGHT_INT(LTYPE, RTYPE)                                               \
-  FORCE_INLINE                                                                      \
-  gdv_##LTYPE shift_right_##LTYPE##_##RTYPE(gdv_##LTYPE in1, gdv_##RTYPE in2) {     \
-    return static_cast<gdv_##LTYPE>(in1 >> in2);                                    \
+#define SHIFT_RIGHT_INT(LTYPE, RTYPE)                                           \
+  FORCE_INLINE                                                                  \
+  gdv_##LTYPE shift_right_##LTYPE##_##RTYPE(gdv_##LTYPE in1, gdv_##RTYPE in2) { \
+    return static_cast<gdv_##LTYPE>(in1 >> in2);                                \
   }
 
 SHIFT_RIGHT_INT(int32, int32)
