@@ -17,7 +17,9 @@
 
 #include <sstream>
 
+#include <arrow/pretty_print.h>
 #include <gtest/gtest.h>
+#include <cmath>
 #include "arrow/memory_pool.h"
 #include "arrow/status.h"
 
@@ -29,6 +31,8 @@
 namespace gandiva {
 
 using arrow::boolean;
+using arrow::float32;
+using arrow::float64;
 using arrow::int32;
 using arrow::int64;
 using arrow::utf8;
@@ -59,7 +63,6 @@ TEST_F(TestHash, TestSimple) {
   auto res_4 = field("res4", int32());
   auto res_5 = field("res5", int32());
   auto res_6 = field("res6", int32());
-  auto res_7 = field("res7", int32());
 
   // build expression.
   // hash32(a, 10)
@@ -78,14 +81,20 @@ TEST_F(TestHash, TestSimple) {
   auto node_f = TreeExprBuilder::MakeField(field_f);
   auto literal_10 = TreeExprBuilder::MakeLiteral((int32_t)10);
   auto literal_0 = TreeExprBuilder::MakeLiteral((int32_t)0);
+  auto literal_dn0 = TreeExprBuilder::MakeLiteral((double)-0.0);
+  auto literal_d0 = TreeExprBuilder::MakeLiteral((double)0.0);
   auto literal_Java_fNaN = TreeExprBuilder::MakeLiteral(java_fNaN);
   auto literal_Java_dNaN = TreeExprBuilder::MakeLiteral(java_dNaN);
   auto isnan_f = TreeExprBuilder::MakeFunction("isNaN", {node_d}, boolean());
   auto isnan_d = TreeExprBuilder::MakeFunction("isNaN", {node_e}, boolean());
+  auto iszero_d =
+      TreeExprBuilder::MakeFunction("equal", {node_e, literal_dn0}, boolean());
   auto process_nan_f =
       TreeExprBuilder::MakeIf(isnan_f, literal_Java_fNaN, node_d, float32());
+  auto process_zero_d = TreeExprBuilder::MakeIf(iszero_d, literal_d0, node_e, float64());
   auto process_nan_d =
-      TreeExprBuilder::MakeIf(isnan_d, literal_Java_dNaN, node_e, float64());
+      TreeExprBuilder::MakeIf(isnan_d, literal_Java_dNaN, process_zero_d, float64());
+
   auto hash32 = TreeExprBuilder::MakeFunction("hash32", {node_a, literal_10}, int32());
   auto hash32_spark =
       TreeExprBuilder::MakeFunction("hash32_spark", {node_b, literal_0}, int32());
@@ -93,13 +102,11 @@ TEST_F(TestHash, TestSimple) {
   auto hash64_spark =
       TreeExprBuilder::MakeFunction("hash64_spark", {node_c, literal_0}, int32());
   auto hash32_spark_float =
-      TreeExprBuilder::MakeFunction("hash32_spark", {node_d, literal_0}, int32());
+      TreeExprBuilder::MakeFunction("hash32_spark", {process_nan_f, literal_0}, int32());
   auto hash64_spark_double =
-      TreeExprBuilder::MakeFunction("hash64_spark", {node_e, literal_0}, int32());
+      TreeExprBuilder::MakeFunction("hash64_spark", {process_nan_d, literal_0}, int32());
   auto hash32_spark_bool =
       TreeExprBuilder::MakeFunction("hash32_spark", {node_f, literal_0}, int32());
-  auto hash64_double =
-      TreeExprBuilder::MakeFunction("hash64", {process_nan_d, literal_0}, int32());
   auto expr_0 = TreeExprBuilder::MakeExpression(hash32, res_0);
   auto expr_1 = TreeExprBuilder::MakeExpression(hash64, res_1);
   auto expr_2 = TreeExprBuilder::MakeExpression(hash32_spark, res_2);
@@ -107,13 +114,12 @@ TEST_F(TestHash, TestSimple) {
   auto expr_4 = TreeExprBuilder::MakeExpression(hash32_spark_float, res_4);
   auto expr_5 = TreeExprBuilder::MakeExpression(hash64_spark_double, res_5);
   auto expr_6 = TreeExprBuilder::MakeExpression(hash32_spark_bool, res_6);
-  auto expr_7 = TreeExprBuilder::MakeExpression(hash64_double, res_7);
 
   // Build a projector for the expression.
   std::shared_ptr<Projector> projector;
-  auto status = Projector::Make(
-      schema, {expr_0, expr_1, expr_2, expr_3, expr_4, expr_5, expr_6, expr_7},
-      TestConfiguration(), &projector);
+  auto status =
+      Projector::Make(schema, {expr_0, expr_1, expr_2, expr_3, expr_4, expr_5, expr_6},
+                      TestConfiguration(), &projector);
   EXPECT_TRUE(status.ok()) << status.message();
 
   // Create a row-batch with some sample data
@@ -125,13 +131,14 @@ TEST_F(TestHash, TestSimple) {
   auto array_d = MakeArrowArrayFloat32({706.17, INFINITY, (float)2143289344, NAN},
                                        {true, true, false, true});
   auto array_e = MakeArrowArrayFloat64(
-      {706.17, INFINITY, (double)9221120237041090560, NAN}, {true, true, false, true});
+      {706.17, INFINITY, (double)9221120237041090560, -0.0}, {true, true, false, true});
   auto array_f = MakeArrowArrayBool({1, 1, 0, 0}, {false, true, true, true});
 
   // prepare input record batch
   auto in_batch = arrow::RecordBatch::Make(
       schema, num_records, {array_a, array_b, array_c, array_d, array_e, array_f});
 
+  // arrow::PrettyPrint(*in_batch.get(), 2, &std::cout);
   // Evaluate expression
   arrow::ArrayVector outputs;
   status = projector->Evaluate(*in_batch, pool_, &outputs);
@@ -154,14 +161,14 @@ TEST_F(TestHash, TestSimple) {
 
   auto int32_spark_arr = std::dynamic_pointer_cast<arrow::Int32Array>(outputs.at(2));
   std::vector<int32_t> int32_spark_arr_expect = {593689054, -189366624, -1134849565,
-                                                 -1718298732};
+                                                 1927335251};
   for (int i = 0; i < num_records; ++i) {
     EXPECT_EQ(int32_spark_arr->Value(i), int32_spark_arr_expect[i]);
   }
 
   auto int64_spark_arr = std::dynamic_pointer_cast<arrow::Int32Array>(outputs.at(3));
   std::vector<int32_t> int64_spark_arr_expect = {1669671676, -846261623, 1871679806,
-                                                 -2073034792};
+                                                 1428788237};
   for (int i = 0; i < num_records; ++i) {
     EXPECT_EQ(int64_spark_arr->Value(i), int64_spark_arr_expect[i]);
   }
@@ -173,7 +180,7 @@ TEST_F(TestHash, TestSimple) {
   }
 
   auto float64_spark_arr = std::dynamic_pointer_cast<arrow::Int32Array>(outputs.at(5));
-  std::vector<int32_t> float64_spark_arr_expect = {1942731644, 1428788237, 0, 1428788237};
+  std::vector<int32_t> float64_spark_arr_expect = {1942731644, 1428788237, 0, 1669671676};
   for (int i = 0; i < num_records; ++i) {
     EXPECT_EQ(float64_spark_arr->Value(i), float64_spark_arr_expect[i]);
   }
@@ -182,12 +189,6 @@ TEST_F(TestHash, TestSimple) {
   std::vector<int32_t> bool_spark_arr_expect = {0, -68075478, 593689054, 593689054};
   for (int i = 0; i < num_records; ++i) {
     EXPECT_EQ(bool_spark_arr->Value(i), bool_spark_arr_expect[i]);
-  }
-
-  auto float64_arr = std::dynamic_pointer_cast<arrow::Int32Array>(outputs.at(7));
-  std::vector<int32_t> float64_arr_expect = {1942731644, 1428788237, 0, 1428788237};
-  for (int i = 0; i < num_records; ++i) {
-    EXPECT_EQ(float64_arr->Value(i), float64_arr_expect[i]);
   }
 }
 
@@ -254,7 +255,6 @@ TEST_F(TestHash, TestBuf) {
   }
 
   auto utf8_spark_arr = std::dynamic_pointer_cast<arrow::Int32Array>(outputs.at(2));
-  // std::vector<int32_t> utf8_spark_arr_expect = {-1167338989, 374203662, -306647525, 0};
   std::vector<int32_t> utf8_spark_arr_expect = {-1167338989, -1136150618, -2074114216, 0};
   for (int i = 0; i < num_records; ++i) {
     EXPECT_EQ(utf8_spark_arr->Value(i), utf8_spark_arr_expect[i]);

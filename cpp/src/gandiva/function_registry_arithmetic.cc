@@ -66,6 +66,10 @@ std::vector<NativeFunction> GetArithmeticFunctionRegistry() {
       UNARY_SAFE_NULL_IF_NULL(castDECIMAL, {}, decimal128, decimal128),
       UNARY_UNSAFE_NULL_IF_NULL(castDECIMAL, {}, utf8, decimal128),
 
+      // isNaN
+      UNARY_SAFE_NULL_IF_NULL(isNaN, {}, float32, boolean),
+      UNARY_SAFE_NULL_IF_NULL(isNaN, {}, float64, boolean),
+
       NativeFunction("castDECIMALNullOnOverflow", {}, DataTypeVector{decimal128()},
                      decimal128(), kResultNullInternal,
                      "castDECIMALNullOnOverflow_decimal128"),

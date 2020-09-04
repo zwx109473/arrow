@@ -70,6 +70,8 @@ gdv_int64 extractHour_time32(gdv_int32 millis_in_day);
 gdv_int64 extractMinute_time32(gdv_int32 millis_in_day);
 gdv_int64 extractSecond_time32(gdv_int32 millis_in_day);
 
+gdv_boolean isNaN_float32(gdv_float32 val);
+gdv_boolean isNaN_float64(gdv_float64 val);
 gdv_int32 hash32(double val, gdv_int32 seed);
 gdv_int32 hash32_buf(const gdv_uint8* buf, int len, gdv_int32 seed);
 gdv_int64 hash64(double val, gdv_int64 seed);
