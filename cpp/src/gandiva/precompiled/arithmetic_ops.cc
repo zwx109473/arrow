@@ -113,6 +113,33 @@ NUMERIC_DATE_TYPES(BINARY_RELATIONAL, greater_than_or_equal_to, >=)
 
 #undef BINARY_RELATIONAL
 
+// Relational binary fns : left, right params are same, return is bool.
+#define BINARY_RELATIONAL_NAN(NAME, TYPE, OP)                       \
+  FORCE_INLINE                                                      \
+  bool NAME##_##TYPE##_##TYPE(gdv_##TYPE left, gdv_##TYPE right) {  \
+    const double infinity = 1.0 / 0.0;                              \
+    bool left_is_nan = std::isnan(left);                            \
+    bool right_is_nan = std::isnan(right);                          \
+    if(left_is_nan && right_is_nan) {                               \
+      return infinity OP infinity;                                  \
+    } else if (left_is_nan) {                                       \
+      return infinity OP right;                                     \
+    } else if (right_is_nan) {                                      \
+      return left OP infinity;                                      \
+    } else {                                                        \
+      return left OP right;                                         \
+    }                                                               \
+  }
+
+NUMERIC_BOOL_DATE_TYPES(BINARY_RELATIONAL_NAN, equal_with_nan, ==)
+NUMERIC_BOOL_DATE_TYPES(BINARY_RELATIONAL_NAN, not_equal_with_nan, !=)
+NUMERIC_DATE_TYPES(BINARY_RELATIONAL_NAN, less_than_with_nan, <)
+NUMERIC_DATE_TYPES(BINARY_RELATIONAL_NAN, less_than_or_equal_to_with_nan, <=)
+NUMERIC_DATE_TYPES(BINARY_RELATIONAL_NAN, greater_than_with_nan, >)
+NUMERIC_DATE_TYPES(BINARY_RELATIONAL_NAN, greater_than_or_equal_to_with_nan, >=)
+
+#undef BINARY_RELATIONAL_NAN
+
 // cast fns : takes one param type, returns another type.
 #define CAST_UNARY(NAME, IN_TYPE, OUT_TYPE)           \
   FORCE_INLINE                                        \
