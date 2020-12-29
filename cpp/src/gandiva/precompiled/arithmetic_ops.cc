@@ -118,17 +118,16 @@ NUMERIC_DATE_TYPES(BINARY_RELATIONAL, greater_than_or_equal_to, >=)
   FORCE_INLINE                                                      \
   bool NAME##_##TYPE##_##TYPE(gdv_##TYPE left, gdv_##TYPE right) {  \
     const double infinity = 1.0 / 0.0;                              \
-    bool left_is_nan = std::isnan(left);                            \
-    bool right_is_nan = std::isnan(right);                          \
-    if(left_is_nan && right_is_nan) {                               \
+    bool left_is_nan = isnan(left);                                 \
+    bool right_is_nan = isnan(right);                               \
+    if (left_is_nan && right_is_nan) {                              \
       return infinity OP infinity;                                  \
     } else if (left_is_nan) {                                       \
       return infinity OP right;                                     \
     } else if (right_is_nan) {                                      \
       return left OP infinity;                                      \
-    } else {                                                        \
-      return left OP right;                                         \
     }                                                               \
+    return left OP right;                                           \
   }
 
 NUMERIC_BOOL_DATE_TYPES(BINARY_RELATIONAL_NAN, equal_with_nan, ==)
