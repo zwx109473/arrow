@@ -97,7 +97,7 @@ ARROW_ZLIB_BUILD_VERSION=1.2.11
 ARROW_ZLIB_BUILD_SHA256_CHECKSUM=c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1
 ARROW_ZSTD_BUILD_VERSION=v1.5.1
 ARROW_ZSTD_BUILD_SHA256_CHECKSUM=dc05773342b28f11658604381afd22cb0a13e8ba17ff2bd7516df377060c18dd
-
+ARROW_FASTPFOR_BUILD_VERSION=b75f8053d8839a866ff44dce9f5204582417cfd8
 
 # The first field is the name of the environment variable expected by cmake.
 # This _must_ match what is defined. The second field is the name of the
