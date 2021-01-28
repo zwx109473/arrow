@@ -329,6 +329,8 @@ TEST(TestCodecMisc, GetCodecAsString) {
   EXPECT_EQ(Codec::GetCodecAsString(Compression::LZ4_FRAME), "lz4");
   EXPECT_EQ(Codec::GetCodecAsString(Compression::ZSTD), "zstd");
   EXPECT_EQ(Codec::GetCodecAsString(Compression::BZ2), "bz2");
+  EXPECT_EQ(Codec::GetCodecAsString(Compression::FASTPFOR), "fastpfor");
+
 }
 
 TEST(TestCodecMisc, GetCompressionType) {
@@ -341,6 +343,7 @@ TEST(TestCodecMisc, GetCompressionType) {
   ASSERT_OK_AND_EQ(Compression::LZ4_FRAME, Codec::GetCompressionType("lz4"));
   ASSERT_OK_AND_EQ(Compression::ZSTD, Codec::GetCompressionType("zstd"));
   ASSERT_OK_AND_EQ(Compression::BZ2, Codec::GetCompressionType("bz2"));
+  ASSERT_OK_AND_EQ(Compression::FASTPFOR, Codec::GetCompressionType("FASTPFOR"));
 
   ASSERT_RAISES(Invalid, Codec::GetCompressionType("unk"));
   ASSERT_RAISES(Invalid, Codec::GetCompressionType("SNAPPY"));
@@ -350,6 +353,10 @@ TEST_P(CodecTest, CodecRoundtrip) {
   const auto compression = GetCompression();
   if (compression == Compression::BZ2) {
     GTEST_SKIP() << "BZ2 does not support one-shot compression";
+  }
+  if (compression == Compression::FASTPFOR) {
+    // SKIP: FastPFOR only support one-shot compression for 32bit and 64bit integer
+    return;
   }
 
   int sizes[] = {0, 10000, 100000};
@@ -368,6 +375,34 @@ TEST_P(CodecTest, CodecRoundtrip) {
   }
 }
 
+TEST_P(CodecTest, CodecRoundtripByType) {
+  const auto compression = GetCompression();
+  if (compression != Compression::FASTPFOR) {
+    return;
+  }
+
+  int sizes[] = {0, 10000};
+
+  // create multiple compressors to try to break them
+  std::unique_ptr<Codec> c1, c2;
+  ASSERT_OK_AND_ASSIGN(c1, Codec::CreateInt32(compression));
+  ASSERT_OK_AND_ASSIGN(c2, Codec::CreateInt32(compression));
+
+  for (int data_size : sizes) {
+    std::vector<uint8_t> data = MakeRandomData(data_size);
+    CheckCodecRoundtrip(c1, c2, data, false);
+  }
+
+  // create multiple compressors to try to break them
+  ASSERT_OK_AND_ASSIGN(c1, Codec::CreateInt64(compression));
+  ASSERT_OK_AND_ASSIGN(c2, Codec::CreateInt64(compression));
+
+  for (int data_size : sizes) {
+    std::vector<uint8_t> data = MakeRandomData(data_size);
+    CheckCodecRoundtrip(c1, c2, data, false);
+  }
+}
+
 TEST(TestCodecMisc, SpecifyCompressionLevel) {
   struct CombinationOption {
     Compression::type codec;
@@ -379,7 +414,8 @@ TEST(TestCodecMisc, SpecifyCompressionLevel) {
       {Compression::ZSTD, 4, true},     {Compression::LZ4, 10, true},
       {Compression::LZO, -22, false},   {Compression::UNCOMPRESSED, 10, false},
       {Compression::SNAPPY, 16, false}, {Compression::GZIP, -992, false},
-      {Compression::LZ4_FRAME, 9, true}};
+      {Compression::LZ4_FRAME, 9, true},
+      {Compression::FASTPFOR, 2, false}};
 
   std::vector<uint8_t> data = MakeRandomData(2000);
   for (const auto& combination : combinations) {
@@ -464,6 +500,10 @@ TEST_P(CodecTest, StreamingCompressor) {
       GetCompression() == Compression::LZ4_HADOOP) {
     GTEST_SKIP() << "LZ4 raw format doesn't support streaming compression.";
   }
+  if (GetCompression() == Compression::FASTPFOR) {
+    // SKIP: FastPFOR doesn't support streaming decompression.
+    return;
+  }
 
   int sizes[] = {0, 10, 100000};
   for (int data_size : sizes) {
@@ -488,6 +528,10 @@ TEST_P(CodecTest, StreamingDecompressor) {
       GetCompression() == Compression::LZ4_HADOOP) {
     GTEST_SKIP() << "LZ4 raw format doesn't support streaming decompression.";
   }
+  if (GetCompression() == Compression::FASTPFOR) {
+    // SKIP: FastPFOR doesn't support streaming decompression.
+    return;
+  }
 
   int sizes[] = {0, 10, 100000};
   for (int data_size : sizes) {
@@ -509,6 +553,10 @@ TEST_P(CodecTest, StreamingRoundtrip) {
       GetCompression() == Compression::LZ4_HADOOP) {
     GTEST_SKIP() << "LZ4 raw format doesn't support streaming compression.";
   }
+  if (GetCompression() == Compression::FASTPFOR) {
+    // SKIP: FastPFOR doesn't support streaming decompression.
+    return;
+  }
 
   int sizes[] = {0, 10, 100000};
   for (int data_size : sizes) {
@@ -529,6 +577,10 @@ TEST_P(CodecTest, StreamingDecompressorReuse) {
   if (GetCompression() == Compression::LZ4 ||
       GetCompression() == Compression::LZ4_HADOOP) {
     GTEST_SKIP() << "LZ4 raw format doesn't support streaming decompression.";
+  }
+  if (GetCompression() == Compression::FASTPFOR) {
+    // SKIP: FastPFOR doesn't support streaming decompression.
+    return;
   }
 
   auto codec = MakeCodec();
@@ -630,6 +682,11 @@ TEST(TestCodecLZ4Hadoop, Compatibility) {
   std::vector<uint8_t> data = MakeRandomData(100);
   CheckCodecRoundtrip(c1, c2, data, /*check_reverse=*/false);
 }
+#endif
+
+#ifdef ARROW_WITH_FASTPFOR
+INSTANTIATE_TEST_SUITE_P(TestFastPFOR, CodecTest,
+                         ::testing::Values(Compression::FASTPFOR));
 #endif
 
 }  // namespace util
