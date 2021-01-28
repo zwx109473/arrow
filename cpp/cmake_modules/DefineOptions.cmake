@@ -392,6 +392,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   define_option(ARROW_WITH_SNAPPY "Build with Snappy compression" OFF)
   define_option(ARROW_WITH_ZLIB "Build with zlib compression" OFF)
   define_option(ARROW_WITH_ZSTD "Build with zstd compression" OFF)
+  define_option(ARROW_WITH_FASTPFOR "Build with FastPFOR compression" OFF)
 
   define_option(ARROW_WITH_UCX
                 "Build with UCX transport for Arrow Flight;(only used if ARROW_FLIGHT is ON)"
