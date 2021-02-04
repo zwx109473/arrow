@@ -407,10 +407,4 @@ TEST(TestExtendedMathOps, TestBinRepresentation) {
             "1000000000000000000000000000000000000000000000000000000000000000");
   EXPECT_FALSE(ctx.has_error());
 }
-TEST(TestExtendedMathOps, TestRound) {
-  EXPECT_EQ(round_float64_int32(1234.56789, 4), 1234.5679);
-  EXPECT_EQ(round_float64_int64(1234.56789, 4), 1234.5679);
-  EXPECT_EQ(round_float64_int32(-1234.56789, 4), -1234.5679);
-  EXPECT_EQ(round_float64_int64(-1234.56789, 4), -1234.5679);
-}
 }  // namespace gandiva
