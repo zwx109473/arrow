@@ -142,11 +142,4 @@ TEST(TestExtendedMathOps, TestTruncate) {
   EXPECT_EQ(truncate_int64_int32(8124674407369523212, -2), 8124674407369523200);
 }
 
-TEST(TestExtendedMathOps, TestRound) {
-  EXPECT_EQ(round_float64_int32(1234.56789, 4), 1234.5679);
-  EXPECT_EQ(round_float64_int64(1234.56789, 4), 1234.5679);
-  EXPECT_EQ(round_float64_int32(-1234.56789, 4), -1234.5679);
-  EXPECT_EQ(round_float64_int64(-1234.56789, 4), -1234.5679);
-}
-
 }  // namespace gandiva
