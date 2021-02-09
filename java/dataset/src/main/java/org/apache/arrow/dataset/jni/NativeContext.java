@@ -17,7 +17,6 @@
 
 package org.apache.arrow.dataset.jni;
 
-import org.apache.arrow.memory.BaseAllocator;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.util.Preconditions;
 
@@ -36,16 +35,14 @@ public class NativeContext {
    */
   public NativeContext(BufferAllocator allocator, NativeMemoryPool memoryPool) {
     this.memoryPool = memoryPool;
-    Preconditions.checkArgument(allocator instanceof BaseAllocator,
-        "currently only instance of BaseAllocator supported");
     this.allocator = allocator;
   }
 
   /**
    * Returns the allocator which is in use.
    */
-  public BaseAllocator getAllocator() {
-    return (BaseAllocator) allocator;
+  public BufferAllocator getAllocator() {
+    return (BufferAllocator) allocator;
   }
 
   /**
