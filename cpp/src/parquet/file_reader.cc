@@ -83,6 +83,10 @@ std::unique_ptr<PageReader> RowGroupReader::GetColumnPageReader(int i) {
   return contents_->GetColumnPageReader(i);
 }
 
+  void RowGroupReader::setCacheManager(std::shared_ptr<CacheManager> manager) {
+    contents_->setCacheManager(manager);
+  }
+
 // Returns the rowgroup metadata
 const RowGroupMetaData* RowGroupReader::metadata() const { return contents_->metadata(); }
 
@@ -141,6 +145,7 @@ class SerializedRowGroup : public RowGroupReader::Contents {
   std::unique_ptr<PageReader> GetColumnPageReader(int i) override {
     // Read column chunk from the file
     auto col = row_group_metadata_->ColumnChunk(i);
+    bool buffered_stream = properties_.is_buffered_stream_enabled();
 
     ::arrow::io::ReadRange col_range =
         ComputeColumnChunkRange(file_metadata_, source_size_, row_group_ordinal_, i);
@@ -150,6 +155,8 @@ class SerializedRowGroup : public RowGroupReader::Contents {
       // segments.
       PARQUET_ASSIGN_OR_THROW(auto buffer, cached_source_->Read(col_range));
       stream = std::make_shared<::arrow::io::BufferReader>(buffer);
+    } else if (cache_manager_ && !buffered_stream) {
+      stream = getCachedStream(col_range);
     } else {
       stream = properties_.GetStream(source_, col_range.offset, col_range.length);
     }
@@ -199,6 +206,41 @@ class SerializedRowGroup : public RowGroupReader::Contents {
                             properties_.memory_pool(), &ctx);
   }
 
+  std::shared_ptr<ArrowInputStream> getCachedStream(::arrow::io::ReadRange col_range) {
+    std::shared_ptr<ArrowInputStream> stream;
+
+    // load column chunk data with cache
+    bool cache_valid = false;
+    bool cache_hit = cache_manager_->containsColumnChunk(col_range);
+
+    if (cache_hit) {
+      std::shared_ptr<Buffer> data = cache_manager_->getColumnChunk(col_range);
+      if (data) {
+        stream = std::make_shared<::arrow::io::BufferReader>(data);
+        cache_valid = true;
+      } else {
+        // delete invalid cache
+        cache_manager_->deleteColumnChunk(col_range);
+        cache_valid = false;
+      }
+    }
+
+    if (!cache_hit || !cache_valid) {
+      // read column chunk from HDFS
+      stream = properties_.GetStream(source_, col_range.offset, col_range.length);
+
+      // cache chunk data
+      cache_manager_->cacheColumnChunk(col_range,
+        std::dynamic_pointer_cast<::arrow::io::BufferReader>(stream)->buffer());
+    }
+
+    return stream;
+  }
+
+  void setCacheManager(std::shared_ptr<CacheManager> manager) override {
+    cache_manager_ = manager;
+  }
+
  private:
   std::shared_ptr<ArrowInputFile> source_;
   // Will be nullptr if PreBuffer() is not called.
@@ -209,6 +251,8 @@ class SerializedRowGroup : public RowGroupReader::Contents {
   ReaderProperties properties_;
   int row_group_ordinal_;
   std::shared_ptr<InternalFileDecryptor> file_decryptor_;
+
+  std::shared_ptr<CacheManager> cache_manager_;
 };
 
 // ----------------------------------------------------------------------
@@ -240,7 +284,13 @@ class SerializedFile : public ParquetFileReader::Contents {
     std::unique_ptr<SerializedRowGroup> contents(
         new SerializedRowGroup(source_, cached_source_, source_size_,
                                file_metadata_.get(), i, properties_, file_decryptor_));
-    return std::make_shared<RowGroupReader>(std::move(contents));
+    auto ptr = std::make_shared<RowGroupReader>(std::move(contents));
+
+    if (cache_manager_) {
+      ptr->setCacheManager(cache_manager_);
+    }
+
+    return ptr;
   }
 
   std::shared_ptr<FileMetaData> metadata() const override { return file_metadata_; }
@@ -314,6 +364,10 @@ class SerializedFile : public ParquetFileReader::Contents {
     }
   }
 
+  void setCacheManager(std::shared_ptr<CacheManager> manager) override {
+    cache_manager_ = manager;
+  }
+
  private:
   std::shared_ptr<ArrowInputFile> source_;
   std::shared_ptr<::arrow::io::internal::ReadRangeCache> cached_source_;
@@ -322,6 +376,8 @@ class SerializedFile : public ParquetFileReader::Contents {
   ReaderProperties properties_;
 
   std::shared_ptr<InternalFileDecryptor> file_decryptor_;
+
+  std::shared_ptr<CacheManager> cache_manager_;
 
   void ParseUnencryptedFileMetadata(const std::shared_ptr<Buffer>& footer_buffer,
                                     int64_t footer_read_size,
@@ -600,6 +656,10 @@ void ParquetFileReader::PreBuffer(const std::vector<int>& row_groups,
   SerializedFile* file =
       ::arrow::internal::checked_cast<SerializedFile*>(contents_.get());
   file->PreBuffer(row_groups, column_indices, ctx, options);
+}
+
+void ParquetFileReader::setCacheManager(std::shared_ptr<CacheManager> manager) {
+  contents_->setCacheManager(manager);
 }
 
 // ----------------------------------------------------------------------
