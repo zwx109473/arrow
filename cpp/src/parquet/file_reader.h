@@ -26,6 +26,7 @@
 #include "parquet/metadata.h"  // IWYU pragma: keep
 #include "parquet/platform.h"
 #include "parquet/properties.h"
+#include "plasma/client.h"
 
 namespace parquet {
 
@@ -34,6 +35,16 @@ class FileMetaData;
 class PageReader;
 class RandomAccessSource;
 class RowGroupMetaData;
+
+class PARQUET_EXPORT CacheManager {
+ public:
+  CacheManager(){};
+  virtual ~CacheManager() = default;
+  virtual bool containsColumnChunk(::arrow::io::ReadRange range) = 0;
+  virtual std::shared_ptr<Buffer> getColumnChunk(::arrow::io::ReadRange range) = 0;
+  virtual bool cacheColumnChunk(::arrow::io::ReadRange range, std::shared_ptr<Buffer> data) = 0;
+  virtual bool deleteColumnChunk(::arrow::io::ReadRange range) = 0;
+};
 
 class PARQUET_EXPORT RowGroupReader {
  public:
@@ -45,6 +56,7 @@ class PARQUET_EXPORT RowGroupReader {
     virtual std::unique_ptr<PageReader> GetColumnPageReader(int i) = 0;
     virtual const RowGroupMetaData* metadata() const = 0;
     virtual const ReaderProperties* properties() const = 0;
+    virtual void setCacheManager(std::shared_ptr<CacheManager> manager) = 0;
   };
 
   explicit RowGroupReader(std::unique_ptr<Contents> contents);
@@ -57,6 +69,8 @@ class PARQUET_EXPORT RowGroupReader {
   std::shared_ptr<ColumnReader> Column(int i);
 
   std::unique_ptr<PageReader> GetColumnPageReader(int i);
+
+  void setCacheManager(std::shared_ptr<CacheManager> manager);
 
  private:
   // Holds a pointer to an instance of Contents implementation
@@ -79,6 +93,7 @@ class PARQUET_EXPORT ParquetFileReader {
     virtual void Close() = 0;
     virtual std::shared_ptr<RowGroupReader> GetRowGroup(int i) = 0;
     virtual std::shared_ptr<FileMetaData> metadata() const = 0;
+    virtual void setCacheManager(std::shared_ptr<CacheManager> manager) = 0;
   };
 
   ParquetFileReader();
@@ -141,6 +156,7 @@ class PARQUET_EXPORT ParquetFileReader {
                  const ::arrow::io::AsyncContext& ctx,
                  const ::arrow::io::CacheOptions& options);
 
+  void setCacheManager(std::shared_ptr<CacheManager> manager);
  private:
   // Holds a pointer to an instance of Contents implementation
   std::unique_ptr<Contents> contents_;
