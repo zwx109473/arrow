@@ -25,6 +25,7 @@
 #include "arrow/result.h"
 #include "arrow/util/future.h"
 #include "arrow/util/logging.h"
+#include "arrow/util/thread_pool.h"
 
 namespace arrow {
 namespace io {
@@ -160,14 +161,72 @@ ReadRangeCache::ReadRangeCache(std::shared_ptr<RandomAccessFile> file, AsyncCont
 
 ReadRangeCache::~ReadRangeCache() = default;
 
+Result<std::shared_ptr<Buffer>> ReadRangeCache::CacheRange(
+  std::shared_ptr<CacheManager> cache_manager,
+  std::shared_ptr<RandomAccessFile> file,
+  ReadRange range) {
+
+  std::shared_ptr<Buffer> data;
+
+  // load data with cache manager
+  bool cache_valid = false;
+  bool cache_hit = cache_manager->containsFileRange(range);
+
+  if (cache_hit) {
+    data = cache_manager->getFileRange(range);
+    if (data) {
+      cache_valid = true;
+    } else {
+      // delete invalid cache
+      cache_manager->deleteFileRange(range);
+      cache_valid = false;
+    }
+  }
+
+  if (!cache_hit || !cache_valid) {
+    // read column chunk from HDFS
+    ARROW_ASSIGN_OR_RAISE(data, file->ReadAt(range.offset, range.length));
+
+    // cache chunk data
+    cache_manager->cacheFileRange(range, data);
+  }
+
+  return data;
+}
+
+Future<std::shared_ptr<Buffer>> ReadRangeCache::CacheRangeAsync(
+  const AsyncContext& ctx,
+  std::shared_ptr<RandomAccessFile> file,
+  ReadRange range) {
+
+  auto self = shared_from_this();
+  auto cache_manager = cache_manager_provider_->newCacheManager();
+  arrow::internal::TaskHints hints;
+  hints.io_size = range.length;
+  hints.external_id = ctx.external_id;
+
+  return DeferNotOk(ctx.executor->Submit(std::move(hints), [self, cache_manager, file, range] {
+    return self->CacheRange(cache_manager, file, range);
+  }));
+}
+
 Status ReadRangeCache::Cache(std::vector<ReadRange> ranges) {
   ranges = internal::CoalesceReadRanges(std::move(ranges), impl_->options.hole_size_limit,
                                         impl_->options.range_size_limit);
   std::vector<RangeCacheEntry> entries;
   entries.reserve(ranges.size());
-  for (const auto& range : ranges) {
-    auto fut = impl_->file->ReadAsync(impl_->ctx, range.offset, range.length);
-    entries.push_back({range, std::move(fut)});
+
+  // check whether cache_manager_provider_ ia available
+  if (cache_manager_provider_) {
+    for (const auto& range : ranges) {
+      auto fut = CacheRangeAsync(impl_->ctx, impl_->file, range);
+      entries.push_back({range, std::move(fut)});
+    }
+  } else {
+    for (const auto& range : ranges) {
+      auto fut = impl_->file->ReadAsync(impl_->ctx, range.offset, range.length);
+      entries.push_back({range, std::move(fut)});
+    }
   }
 
   impl_->AddEntries(std::move(entries));
@@ -191,6 +250,10 @@ Result<std::shared_ptr<Buffer>> ReadRangeCache::Read(ReadRange range) {
     return SliceBuffer(std::move(buf), range.offset - it->range.offset, range.length);
   }
   return Status::Invalid("ReadRangeCache did not find matching cache entry");
+}
+
+void ReadRangeCache::setCacheManagerProvider(std::shared_ptr<CacheManagerProvider> manager_provider) {
+  cache_manager_provider_ = manager_provider;
 }
 
 }  // namespace internal
