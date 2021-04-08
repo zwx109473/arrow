@@ -904,6 +904,18 @@ gdv_time32 castTIME_timestamp(gdv_timestamp timestamp_in_millis) {
   return static_cast<int32_t>(millis_since_midnight);
 }
 
+gdv_timestamp convertTimestampUnit_ms(gdv_timestamp timestamp_in_millis) {
+  return timestamp_in_millis * 1000;
+}
+
+gdv_timestamp convertTimestampUnit_us(gdv_timestamp timestamp_in_micro) {
+  return timestamp_in_micro / 1000;
+}
+
+gdv_date32 castDATE_date64(gdv_date64 date_in_millis) {
+  return static_cast<gdv_date32>(date_in_millis / (MILLIS_IN_DAY));
+}
+
 // Gets an arbitrary number and return the number of milliseconds since midnight
 gdv_time32 castTIME_int32(int32_t int_val) {
   if (int_val < 0) {
