@@ -234,6 +234,8 @@ class ARROW_DS_EXPORT FileSystemDatasetFactory : public DatasetFactory {
   /// \param[in] format passed to FileSystemDataset
   /// \param[in] options see FileSystemFactoryOptions for more information.
   static Result<std::shared_ptr<DatasetFactory>> Make(std::string uri,
+                                                      int64_t start_offset,
+                                                      int64_t length,
                                                       std::shared_ptr<FileFormat> format,
                                                       FileSystemFactoryOptions options);
 
@@ -261,7 +263,7 @@ class ARROW_DS_EXPORT FileSystemDatasetFactory : public DatasetFactory {
 
   Result<std::shared_ptr<Schema>> PartitionSchema();
 
-  std::vector<fs::FileInfo> files_;
+  std::vector<FileSource> files_;
   std::shared_ptr<fs::FileSystem> fs_;
   std::shared_ptr<FileFormat> format_;
   FileSystemFactoryOptions options_;
