@@ -311,7 +311,8 @@ CRC_FUNCTION(binary)
   INNER(date64)                             \
   INNER(date32)                             \
   INNER(time32)                             \
-  INNER(timestamp)
+  INNER(timestamp)                          \
+  INNER(timestampusutc)
 
 // Expand inner macro for all numeric types.
 #define SHA_VAR_LEN_PARAMS(INNER) \

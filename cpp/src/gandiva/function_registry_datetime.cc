@@ -96,6 +96,9 @@ std::vector<NativeFunction> GetDateTimeFunctionRegistry() {
       NativeFunction("castTIME", {}, DataTypeVector{timestamp()}, time32(),
                      kResultNullIfNull, "castTIME_timestamp"),
 
+      NativeFunction("castBIGINT", {}, DataTypeVector{timestamp()}, int64(),
+                     kResultNullIfNull, "castBIGINT_timestamp"),
+
       NativeFunction("castBIGINT", {}, DataTypeVector{day_time_interval()}, int64(),
                      kResultNullIfNull, "castBIGINT_daytimeinterval"),
 
@@ -139,6 +142,12 @@ std::vector<NativeFunction> GetDateTimeFunctionRegistry() {
 
       NativeFunction("castDATE", {}, DataTypeVector{date64()}, date32(),
                      kResultNullIfNull, "castDATE_date64"),
+
+      NativeFunction("castTIMESTAMP", {}, DataTypeVector{date32()}, timestamp(),
+                     kResultNullIfNull, "castTIMESTAMP_date32"),
+
+      NativeFunction("castDATE", {}, DataTypeVector{timestamp()}, date32(),
+                     kResultNullIfNull, "castDATE32_timestamp"),
       DATE_TYPES(LAST_DAY_SAFE_NULL_IF_NULL, last_day, {});
 
   return date_time_fn_registry_;
