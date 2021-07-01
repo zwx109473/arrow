@@ -413,10 +413,9 @@ JNIEXPORT jlong JNICALL Java_org_apache_arrow_dataset_jni_JniWrapper_createScann
   std::shared_ptr<arrow::dataset::ScannerBuilder> scanner_builder =
       JniGetOrThrow(dataset->NewScan());
   JniAssertOkOrThrow(scanner_builder->Pool(pool));
-  if (columns != nullptr) {
-    std::vector<std::string> column_vector = ToStringVector(env, columns);
-    JniAssertOkOrThrow(scanner_builder->Project(column_vector));
-  }
+
+  std::vector<std::string> column_vector = ToStringVector(env, columns);
+  JniAssertOkOrThrow(scanner_builder->Project(column_vector));
   JniAssertOkOrThrow(scanner_builder->BatchSize(batch_size));
 
   auto scanner = JniGetOrThrow(scanner_builder->Finish());
