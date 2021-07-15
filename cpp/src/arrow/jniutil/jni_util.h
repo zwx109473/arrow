@@ -27,8 +27,9 @@
 #include <jni.h>
 
 namespace arrow {
-namespace dataset {
-namespace jni {
+namespace jniutil {
+
+Status CheckException(JNIEnv* env);
 
 jclass CreateGlobalClassReference(JNIEnv* env, const char* class_name);
 
@@ -47,6 +48,16 @@ arrow::Result<jbyteArray> ToSchemaByteArray(JNIEnv* env,
 
 arrow::Result<std::shared_ptr<arrow::Schema>> FromSchemaByteArray(JNIEnv* env,
                                                                   jbyteArray schemaBytes);
+
+/// \brief Serialize arrow::RecordBatch to jbyteArray (Java byte array byte[]). For
+/// letting Java code manage lifecycles of buffers in the input batch, shared pointer IDs
+/// pointing to the buffers are serialized into buffer metadata.
+Result<jbyteArray> SerializeUnsafeFromNative(JNIEnv* env,
+                                             const std::shared_ptr<RecordBatch>& batch);
+
+/// \brief Deserialize jbyteArray (Java byte array byte[]) to arrow::RecordBatch.
+Result<std::shared_ptr<RecordBatch>> DeserializeUnsafeFromJava(
+    JNIEnv* env, std::shared_ptr<Schema> schema, jbyteArray byte_array);
 
 /// \brief Create a new shared_ptr on heap from shared_ptr t to prevent
 /// the managed object from being garbage-collected.
@@ -130,6 +141,5 @@ class ReservationListenableMemoryPool : public arrow::MemoryPool {
   std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace jni
-}  // namespace dataset
+}  // namespace jniutil
 }  // namespace arrow

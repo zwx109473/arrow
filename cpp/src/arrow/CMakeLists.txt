@@ -488,6 +488,14 @@ if(ARROW_FILESYSTEM)
   list(APPEND ARROW_TESTING_SRCS filesystem/test_util.cc)
 endif()
 
+if(ARROW_JNIUTIL)
+  find_package(JNI REQUIRED)
+  list(APPEND ARROW_SRCS
+              jniutil/jni_util.cc)
+
+  set(ARROW_PRIVATE_INCLUDES ${ARROW_PRIVATE_INCLUDES} ${JNI_INCLUDE_DIRS})
+endif()
+
 if(ARROW_IPC)
   list(APPEND
        ARROW_SRCS
@@ -572,7 +580,9 @@ add_arrow_lib(arrow
               SHARED_INSTALL_INTERFACE_LIBS
               ${ARROW_SHARED_INSTALL_INTERFACE_LIBS}
               STATIC_INSTALL_INTERFACE_LIBS
-              ${ARROW_STATIC_INSTALL_INTERFACE_LIBS})
+              ${ARROW_STATIC_INSTALL_INTERFACE_LIBS}
+              PRIVATE_INCLUDES
+              ${JNI_INCLUDE_DIRS})
 
 add_dependencies(arrow ${ARROW_LIBRARIES})
 
@@ -763,6 +773,10 @@ endif()
 
 if(ARROW_IPC)
   add_subdirectory(ipc)
+endif()
+
+if(ARROW_JNIUTIL)
+  add_subdirectory(jniutil)
 endif()
 
 if(ARROW_JSON)
