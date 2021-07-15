@@ -19,11 +19,10 @@
 
 #include "arrow/memory_pool.h"
 #include "arrow/testing/gtest_util.h"
-#include "jni/dataset/jni_util.h"
+#include "arrow/jniutil/jni_util.h"
 
 namespace arrow {
-namespace dataset {
-namespace jni {
+namespace jniutil {
 
 class MyListener : public ReservationListener {
  public:
@@ -129,6 +128,5 @@ TEST(ReservationListenableMemoryPool, BlockSize2) {
   ASSERT_EQ(1, listener->release_count());
 }
 
-}  // namespace jni
-}  // namespace dataset
+}  // namespace jniutil
 }  // namespace arrow
