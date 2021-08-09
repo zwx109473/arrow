@@ -17,6 +17,7 @@
 
 package org.apache.arrow.dataset.file;
 
+import org.apache.arrow.dataset.file.format.FileFormat;
 import org.apache.arrow.dataset.jni.NativeDatasetFactory;
 import org.apache.arrow.dataset.jni.NativeMemoryPool;
 import org.apache.arrow.memory.BufferAllocator;

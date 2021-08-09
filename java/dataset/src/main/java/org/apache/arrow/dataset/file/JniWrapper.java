@@ -57,13 +57,13 @@ public class JniWrapper {
    * intermediate shared_ptr of the factory instance.
    *
    * @param uri file uri to read
-   * @param fileFormat file format ID
+   * @param fileFormat file format instance ID
    * @param startOffset random read position. -1 for reading from start.
    * @param length reading length. -1 for reading all bytes of the file.
    * @return the native pointer of the arrow::dataset::FileSystemDatasetFactory instance.
-   * @see FileFormat
+   * @see org.apache.arrow.dataset.file.format.FileFormat
    */
-  public native long makeFileSystemDatasetFactory(String uri, int fileFormat, long startOffset, long length);
+  public native long makeFileSystemDatasetFactory(String uri, long fileFormat, long startOffset, long length);
 
   /**
    * Write all record batches in a {@link NativeSerializedRecordBatchIterator} into files. This internally
@@ -79,6 +79,12 @@ public class JniWrapper {
    *                         ID around all written files.
    */
   public native void writeFromScannerToFile(NativeSerializedRecordBatchIterator itr, byte[] schema,
-      int fileFormat, String uri, String[] partitionColumns, int maxPartitions, String baseNameTemplate);
+      long fileFormat, String uri, String[] partitionColumns, int maxPartitions,
+      String baseNameTemplate);
 
+
+  // todo javadoc
+  public native long createParquetFileFormat(String[] dictColumns);
+  public native long createCsvFileFormat(char delimiter);
+  public native void releaseFileFormatInstance(long nativeInstanceId);
 }

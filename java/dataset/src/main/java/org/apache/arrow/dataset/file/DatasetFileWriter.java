@@ -17,6 +17,7 @@
 
 package org.apache.arrow.dataset.file;
 
+import org.apache.arrow.dataset.file.format.FileFormat;
 import org.apache.arrow.dataset.jni.NativeSerializedRecordBatchIterator;
 import org.apache.arrow.dataset.scanner.Scanner;
 import org.apache.arrow.util.AutoCloseables;

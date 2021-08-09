@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,7 +31,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.arrow.dataset.ParquetWriteSupport;
+import org.apache.arrow.dataset.file.format.CsvFileFormat;
+import org.apache.arrow.dataset.file.format.ParquetFileFormat;
 import org.apache.arrow.dataset.filter.Filter;
 import org.apache.arrow.dataset.jni.NativeDataset;
 import org.apache.arrow.dataset.jni.NativeInstanceReleasedException;
@@ -69,8 +73,8 @@ public class TestFileSystemDataset extends TestNativeDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
-    ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
+    ScanOptions options = new ScanOptions(new String[] {"id", "name"}, Filter.EMPTY, 100);
     Schema schema = inferResultSchemaFromFactory(factory, options);
     List<ArrowRecordBatch> datum = collectResultFromFactory(factory, options);
 
@@ -88,22 +92,94 @@ public class TestFileSystemDataset extends TestNativeDataset {
   }
 
   @Test
+  public void testCsvRead() throws Exception {
+    RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+    FileSystemDatasetFactory factory = new FileSystemDatasetFactory(allocator,
+        NativeMemoryPool.getDefault(), CsvFileFormat.createDefault(), "file://" + resourcePath("data/people-comma.csv"));
+    ScanOptions options = new ScanOptions(new String[] {"name", "age", "job"}, Filter.EMPTY, 100);
+    Schema schema = factory.inspect();
+    NativeDataset dataset = factory.finish(schema);
+    NativeScanner nativeScanner = dataset.newScan(options);
+    List<? extends ScanTask> scanTasks = collect(nativeScanner.scan());
+    Assert.assertEquals(1, scanTasks.size());
+    ScanTask scanTask = scanTasks.get(0);
+    ScanTask.BatchIterator itr = scanTask.execute();
+
+    VectorSchemaRoot vsr = VectorSchemaRoot.create(schema, allocator);
+    VectorLoader loader = new VectorLoader(vsr);
+    int rowCount = 0;
+    while (itr.hasNext()) {
+      try (ArrowRecordBatch next = itr.next()) {
+        loader.load(next);
+      }
+      rowCount += vsr.getRowCount();
+
+      // check if projector is applied
+      Assert.assertEquals("Schema<name: Utf8, age: Int(64, true), job: Utf8>",
+          vsr.getSchema().toString());
+    }
+    Assert.assertEquals(2, rowCount);
+    assertEquals(3, schema.getFields().size());
+    assertEquals("name", schema.getFields().get(0).getName());
+    assertEquals("age", schema.getFields().get(1).getName());
+    assertEquals("job", schema.getFields().get(2).getName());
+    AutoCloseables.close(vsr, allocator);
+  }
+
+  @Test
+  public void testCsvReadTab() throws Exception {
+    RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+    FileSystemDatasetFactory factory = new FileSystemDatasetFactory(allocator,
+        NativeMemoryPool.getDefault(),
+        CsvFileFormat.create(ImmutableMap.<String, String>builder().put("delimiter", "\t").build()),
+        "file://" + resourcePath("data/people-tab.csv"));
+    ScanOptions options = new ScanOptions(new String[] {"name", "age", "job"}, Filter.EMPTY, 100);
+    Schema schema = factory.inspect();
+    NativeDataset dataset = factory.finish(schema);
+    NativeScanner nativeScanner = dataset.newScan(options);
+    List<? extends ScanTask> scanTasks = collect(nativeScanner.scan());
+    Assert.assertEquals(1, scanTasks.size());
+    ScanTask scanTask = scanTasks.get(0);
+    ScanTask.BatchIterator itr = scanTask.execute();
+
+    VectorSchemaRoot vsr = VectorSchemaRoot.create(schema, allocator);
+    VectorLoader loader = new VectorLoader(vsr);
+    int rowCount = 0;
+    while (itr.hasNext()) {
+      try (ArrowRecordBatch next = itr.next()) {
+        loader.load(next);
+      }
+      rowCount += vsr.getRowCount();
+
+      // check if projector is applied
+      Assert.assertEquals("Schema<name: Utf8, age: Int(64, true), job: Utf8>",
+          vsr.getSchema().toString());
+    }
+    Assert.assertEquals(2, rowCount);
+    assertEquals(3, schema.getFields().size());
+    assertEquals("name", schema.getFields().get(0).getName());
+    assertEquals("age", schema.getFields().get(1).getName());
+    assertEquals("job", schema.getFields().get(2).getName());
+    AutoCloseables.close(vsr, allocator);
+  }
+
+  @Test
   public void testReadPartialFile() throws Exception {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
 
     FileSystemDatasetFactory factory1 = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-            FileFormat.PARQUET, writeSupport.getOutputURI(), 0, 0);
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI(), 0, 0);
     List<ArrowRecordBatch> datum1 = collectResultFromFactory(factory1, options);
     assertEquals(0, datum1.size());
 
     FileSystemDatasetFactory factory2 = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-            FileFormat.PARQUET, writeSupport.getOutputURI(), 0, 100000);
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI(), 0, 100000);
     List<ArrowRecordBatch> datum2 = collectResultFromFactory(factory2, options);
     assertEquals(1, datum2.size());
 
     FileSystemDatasetFactory factory3 = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-            FileFormat.PARQUET, writeSupport.getOutputURI(), 100000, 100000);
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI(), 100000, 100000);
     List<ArrowRecordBatch> datum3 = collectResultFromFactory(factory3, options);
     assertEquals(0, datum3.size());
 
@@ -115,7 +191,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     ScanOptions options = new ScanOptions(new String[]{"id"}, Filter.EMPTY, 100);
     Schema schema = inferResultSchemaFromFactory(factory, options);
     List<ArrowRecordBatch> datum = collectResultFromFactory(factory, options);
@@ -143,11 +219,10 @@ public class TestFileSystemDataset extends TestNativeDataset {
             2, "b");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-            FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     ScanOptions options = new ScanOptions(new String[]{}, Filter.EMPTY, 100);
     Schema schema = inferResultSchemaFromFactory(factory, options);
     List<ArrowRecordBatch> datum = collectResultFromFactory(factory, options);
-    org.apache.avro.Schema expectedSchema = truncateAvroSchema(writeSupport.getAvroSchema(), 0, 1);
 
     assertSingleTaskProduced(factory, options);
     assertEquals(0, schema.getFields().size());
@@ -165,7 +240,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
 
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 1);
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     Schema schema = inferResultSchemaFromFactory(factory, options);
     List<ArrowRecordBatch> datum = collectResultFromFactory(factory, options);
 
@@ -183,7 +258,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
 
     assertDoesNotThrow(() -> {
       NativeDataset dataset = factory.finish();
@@ -199,7 +274,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     NativeDataset dataset = factory.finish();
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     NativeScanner scanner = dataset.newScan(options);
@@ -225,7 +300,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     NativeDataset dataset = factory.finish();
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     NativeScanner scanner = dataset.newScan(options);
@@ -243,7 +318,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     NativeDataset dataset = factory.finish();
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     NativeScanner scanner = dataset.newScan(options);
@@ -257,7 +332,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     NativeDataset dataset = factory.finish();
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     NativeScanner scanner = dataset.newScan(options);
@@ -273,7 +348,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
 
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     NativeDataset dataset = factory.finish();
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     NativeScanner scanner = dataset.newScan(options);
@@ -289,7 +364,7 @@ public class TestFileSystemDataset extends TestNativeDataset {
   public void testMemoryAllocation() throws Exception {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-            FileFormat.PARQUET, writeSupport.getOutputURI());
+        ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     long initReservation = rootAllocator().getAllocatedMemory();
     List<ArrowRecordBatch> datum = collectResultFromFactory(factory, options);
@@ -344,5 +419,9 @@ public class TestFileSystemDataset extends TestNativeDataset {
         fields.stream()
             .map(f -> new org.apache.avro.Schema.Field(f.name(), f.schema(), f.doc(), f.defaultVal(), f.order()))
             .collect(Collectors.toList()));
+  }
+
+  private String resourcePath(String resource) {
+    return Objects.requireNonNull(TestFileSystemDataset.class.getResource(File.separator + resource)).getPath();
   }
 }

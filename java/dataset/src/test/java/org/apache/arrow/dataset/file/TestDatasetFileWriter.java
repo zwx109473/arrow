@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 import org.apache.arrow.dataset.ParquetWriteSupport;
 import org.apache.arrow.dataset.TestDataset;
+import org.apache.arrow.dataset.file.format.ParquetFileFormat;
 import org.apache.arrow.dataset.filter.Filter;
 import org.apache.arrow.dataset.jni.NativeMemoryPool;
 import org.apache.arrow.dataset.scanner.ScanOptions;
@@ -58,14 +59,14 @@ public class TestDatasetFileWriter extends TestDataset {
         1, "a", 2, "b", 3, "c", 2, "d");
     String sampleParquet = writeSupport.getOutputURI();
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, sampleParquet);
+        ParquetFileFormat.createDefault(), sampleParquet);
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     final Dataset dataset = factory.finish();
     final Scanner scanner = dataset.newScan(options);
     final File writtenFolder = TMP.newFolder();
     final String writtenParquet = writtenFolder.toURI().toString();
     try {
-      DatasetFileWriter.write(scanner, FileFormat.PARQUET, writtenParquet);
+      DatasetFileWriter.write(scanner, ParquetFileFormat.createDefault(), writtenParquet);
       assertParquetFileEquals(sampleParquet, Objects.requireNonNull(writtenFolder.listFiles())[0].toURI().toString());
     } finally {
       AutoCloseables.close(factory, scanner, dataset);
@@ -78,14 +79,14 @@ public class TestDatasetFileWriter extends TestDataset {
         1, "a", 2, "b", 3, "c", 2, "d");
     String sampleParquet = writeSupport.getOutputURI();
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(), NativeMemoryPool.getDefault(),
-        FileFormat.PARQUET, sampleParquet);
+        ParquetFileFormat.createDefault(), sampleParquet);
     ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     final Dataset dataset = factory.finish();
     final Scanner scanner = dataset.newScan(options);
     final File writtenFolder = TMP.newFolder();
     final String writtenParquet = writtenFolder.toURI().toString();
     try {
-      DatasetFileWriter.write(scanner, FileFormat.PARQUET, writtenParquet, new String[]{"id", "name"}, 100, "dat_{i}");
+      DatasetFileWriter.write(scanner, ParquetFileFormat.createDefault(), writtenParquet, new String[]{"id", "name"}, 100, "dat_{i}");
       final Set<String> expectedOutputFiles = new HashSet<>(
           Arrays.asList("id=1/name=a/dat_0", "id=2/name=b/dat_1", "id=3/name=c/dat_2", "id=2/name=d/dat_3"));
       final Set<String> outputFiles = FileUtils.listFiles(writtenFolder, null, true)
@@ -102,11 +103,11 @@ public class TestDatasetFileWriter extends TestDataset {
 
   private void assertParquetFileEquals(String expectedURI, String actualURI) throws Exception {
     final FileSystemDatasetFactory expectedFactory = new FileSystemDatasetFactory(
-        rootAllocator(), NativeMemoryPool.getDefault(), FileFormat.PARQUET, expectedURI);
+        rootAllocator(), NativeMemoryPool.getDefault(), ParquetFileFormat.createDefault(), expectedURI);
     List<ArrowRecordBatch> expectedBatches = collectResultFromFactory(expectedFactory,
         new ScanOptions(new String[0], Filter.EMPTY, 100));
     final FileSystemDatasetFactory actualFactory = new FileSystemDatasetFactory(
-        rootAllocator(), NativeMemoryPool.getDefault(), FileFormat.PARQUET, actualURI);
+        rootAllocator(), NativeMemoryPool.getDefault(), ParquetFileFormat.createDefault(), actualURI);
     List<ArrowRecordBatch> actualBatches = collectResultFromFactory(actualFactory,
         new ScanOptions(new String[0], Filter.EMPTY, 100));
     // fast-fail by comparing metadata
