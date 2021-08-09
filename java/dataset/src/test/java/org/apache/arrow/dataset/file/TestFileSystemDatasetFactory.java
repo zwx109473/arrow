@@ -21,17 +21,22 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.apache.arrow.dataset.file.format.FileFormat;
+import org.apache.arrow.dataset.file.format.FileFormatBase;
+import org.apache.arrow.dataset.file.format.ParquetFileFormat;
 import org.apache.arrow.dataset.jni.NativeMemoryPool;
 import org.apache.arrow.memory.RootAllocator;
 import org.junit.Test;
 
 public class TestFileSystemDatasetFactory {
 
+  private static final FileFormat DUMMY_FORMAT = new FileFormatBase(-1L) {};
+
   @Test
   public void testErrorHandling() {
     RuntimeException e = assertThrows(RuntimeException.class, () -> {
       new FileSystemDatasetFactory(new RootAllocator(Long.MAX_VALUE), NativeMemoryPool.getDefault(),
-          FileFormat.NONE, "file:///NON_EXIST_FILE");
+          DUMMY_FORMAT, "file:///NON_EXIST_FILE");
     });
     assertEquals("illegal file format id: -1", e.getMessage());
   }
@@ -40,7 +45,7 @@ public class TestFileSystemDatasetFactory {
   public void testCloseAgain() {
     assertDoesNotThrow(() -> {
       FileSystemDatasetFactory factory = new FileSystemDatasetFactory(new RootAllocator(Long.MAX_VALUE),
-          NativeMemoryPool.getDefault(), FileFormat.PARQUET, "file:///NON_EXIST_FILE");
+          NativeMemoryPool.getDefault(), ParquetFileFormat.createDefault(), "file:///NON_EXIST_FILE");
       factory.close();
       factory.close();
     });
