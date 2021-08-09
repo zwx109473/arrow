@@ -62,5 +62,24 @@ public class JniWrapper {
    * @return the native pointer of method reference object.
    */
   public native long newJniMethodReference(String classSignature, String methodName,
-                                           String methodSignature);
+      String methodSignature);
+
+  /**
+   * Create FileSystemDatasetFactory and return its native pointer. The pointer is pointing to a
+   * intermediate shared_ptr of the factory instance.
+   *
+   * @param uri file uri to read
+   * @param fileFormat file format instance ID
+   * @param startOffset random read position. -1 for reading from start.
+   * @param length reading length. -1 for reading all bytes of the file.
+   * @return the native pointer of the arrow::dataset::FileSystemDatasetFactory instance.
+   * @see org.apache.arrow.dataset.file.format.FileFormat
+   */
+  public native long makeFileSystemDatasetFactory(String uri, long fileFormat, long startOffset, long length);
+
+
+  // todo javadoc
+  public native long createParquetFileFormat(String[] dictColumns);
+  public native long createCsvFileFormat(char delimiter);
+  public native void releaseFileFormatInstance(long nativeInstanceId);
 }

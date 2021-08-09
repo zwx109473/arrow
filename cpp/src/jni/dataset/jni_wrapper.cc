@@ -73,17 +73,9 @@ void JniAssertOkOrThrow(arrow::Status status) {
 void JniThrow(std::string message) { ThrowPendingException(message); }
 
 arrow::Result<std::shared_ptr<arrow::dataset::FileFormat>> GetFileFormat(
-    jint file_format_id) {
-  switch (file_format_id) {
-    case 0:
-      return std::make_shared<arrow::dataset::ParquetFileFormat>();
-    case 1:
-      return std::make_shared<arrow::dataset::CsvFileFormat>();
-    default:
-      std::string error_message =
-          "illegal file format id: " + std::to_string(file_format_id);
-      return arrow::Status::Invalid(error_message);
-  }
+    jlong file_format_id) {
+  return arrow::jniutil::RetrieveNativeInstance<arrow::dataset::FileFormat>(
+      file_format_id);
 }
 
 class ReserveFromJava : public arrow::jniutil::ReservationListener {
@@ -495,4 +487,66 @@ Java_org_apache_arrow_dataset_file_JniWrapper_newJniMethodReference(JNIEnv* env,
                          JStringToCString(env, method_sig).data());
     return reinterpret_cast<jlong>(jmethod_id);
   JNI_METHOD_END(-1L)
+}
+
+/*
+ * Class:     org_apache_arrow_dataset_file_JniWrapper
+ * Method:    makeFileSystemDatasetFactory
+ * Signature: (Ljava/lang/String;JJJ)J
+ */
+JNIEXPORT jlong JNICALL
+Java_org_apache_arrow_dataset_file_JniWrapper_makeFileSystemDatasetFactory(
+    JNIEnv* env, jobject, jstring uri, jlong file_format_id,
+    jlong start_offset, jlong length) {
+  JNI_METHOD_START
+  std::shared_ptr<arrow::dataset::FileFormat> file_format =
+      JniGetOrThrow(GetFileFormat(file_format_id));
+  arrow::dataset::FileSystemFactoryOptions options;
+  std::shared_ptr<arrow::dataset::DatasetFactory> d =
+      JniGetOrThrow(arrow::dataset::FileSystemDatasetFactory::Make(
+          JStringToCString(env, uri), start_offset, length, file_format, options));
+  return CreateNativeRef(d);
+  JNI_METHOD_END(-1L)
+}
+
+/*
+ * Class:     org_apache_arrow_dataset_file_JniWrapper
+ * Method:    createParquetFileFormat
+ * Signature: ([Ljava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL Java_org_apache_arrow_dataset_file_JniWrapper_createParquetFileFormat
+    (JNIEnv* env, jobject, jobjectArray dict_columns) {
+  JNI_METHOD_START
+  auto format = std::make_shared<arrow::dataset::ParquetFileFormat>();
+  auto dict_column_vector = ToStringVector(env, dict_columns);
+  format->reader_options.dict_columns = std::unordered_set<std::string>(
+      dict_column_vector.begin(), dict_column_vector.end());
+  return arrow::jniutil::CreateNativeRef(format);
+  JNI_METHOD_END(-1L)
+}
+
+/*
+ * Class:     org_apache_arrow_dataset_file_JniWrapper
+ * Method:    createCsvFileFormat
+ * Signature: (C)J
+ */
+JNIEXPORT jlong JNICALL Java_org_apache_arrow_dataset_file_JniWrapper_createCsvFileFormat
+    (JNIEnv* env, jobject, jchar delimiter){
+  JNI_METHOD_START
+  auto format = std::make_shared<arrow::dataset::CsvFileFormat>();
+  format->parse_options.delimiter = static_cast<char>(delimiter);
+  return arrow::jniutil::CreateNativeRef(format);
+  JNI_METHOD_END(-1L)
+}
+
+/*
+ * Class:     org_apache_arrow_dataset_file_JniWrapper
+ * Method:    releaseFileFormatInstance
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_arrow_dataset_file_JniWrapper_releaseFileFormatInstance
+    (JNIEnv* env, jobject, jlong instance_id){
+  JNI_METHOD_START
+  arrow::jniutil::ReleaseNativeRef<arrow::dataset::FileFormat>(instance_id);
+  JNI_METHOD_END()
 }

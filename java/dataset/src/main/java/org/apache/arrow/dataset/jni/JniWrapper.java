@@ -87,7 +87,7 @@ public class JniWrapper {
 
   /**
    * Release the Scanner by destroying its reference held by JNI wrapper.
-   * @param scannerId the native pointer of the arrow::dataset::Scanner instance.
+   * @param scannerId the native pointer of the arrow::dataset::Scanner instance.writeFromScannerToFile
    */
   public native void closeScanner(long scannerId);
 

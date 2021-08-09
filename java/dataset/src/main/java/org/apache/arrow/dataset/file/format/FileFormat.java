@@ -15,23 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.arrow.dataset.file;
+package org.apache.arrow.dataset.file.format;
 
-/**
- * File format definitions.
- */
-public enum FileFormat {
-  PARQUET(0),
-  CSV(1),
-  NONE(-1);
+import java.io.Closeable;
 
-  private int id;
-
-  FileFormat(int id) {
-    this.id = id;
-  }
-
-  public int id() {
-    return id;
-  }
+public interface FileFormat extends Closeable {
+  long id();
 }

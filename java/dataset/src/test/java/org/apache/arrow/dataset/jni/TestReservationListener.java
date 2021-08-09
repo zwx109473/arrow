@@ -22,8 +22,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.arrow.dataset.ParquetWriteSupport;
 import org.apache.arrow.dataset.TestDataset;
-import org.apache.arrow.dataset.file.FileFormat;
 import org.apache.arrow.dataset.file.FileSystemDatasetFactory;
+import org.apache.arrow.dataset.file.format.ParquetFileFormat;
+import org.apache.arrow.dataset.filter.Filter;
 import org.apache.arrow.dataset.scanner.ScanOptions;
 import org.apache.arrow.util.AutoCloseables;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
@@ -44,9 +45,9 @@ public class TestReservationListener extends TestDataset {
     ParquetWriteSupport writeSupport = ParquetWriteSupport.writeTempFile(AVRO_SCHEMA_USER, TMP.newFolder(), 1, "a");
     NativeMemoryPool pool = NativeMemoryPool.createListenable(DirectReservationListener.instance());
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(),
-        pool, FileFormat.PARQUET,
+        pool, ParquetFileFormat.createDefault(),
         writeSupport.getOutputURI());
-    ScanOptions options = new ScanOptions(100);
+    ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     long initReservation = DirectReservationListener.instance().getCurrentDirectMemReservation();
     List<ArrowRecordBatch> datum = collectResultFromFactory(factory, options);
     long reservation = DirectReservationListener.instance().getCurrentDirectMemReservation();
@@ -74,8 +75,8 @@ public class TestReservationListener extends TestDataset {
     };
     NativeMemoryPool pool = NativeMemoryPool.createListenable(listener);
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(rootAllocator(),
-        pool, FileFormat.PARQUET, writeSupport.getOutputURI());
-    ScanOptions options = new ScanOptions(100);
+        pool, ParquetFileFormat.createDefault(), writeSupport.getOutputURI());
+    ScanOptions options = new ScanOptions(new String[0], Filter.EMPTY, 100);
     long initReservation = reserved.get();
     List<ArrowRecordBatch> datum = collectResultFromFactory(factory, options);
     long reservation = reserved.get();
