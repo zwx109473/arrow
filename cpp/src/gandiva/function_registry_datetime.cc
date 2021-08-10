@@ -61,8 +61,16 @@ std::vector<NativeFunction> GetDateTimeFunctionRegistry() {
                      "castDATE_utf8",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
 
+      NativeFunction("castDATE_nullsafe", {}, DataTypeVector{utf8()}, date64(),
+                     kResultNullInternal, "castDATE_nullsafe_utf8",
+                     NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
+
       NativeFunction("castTIMESTAMP", {}, DataTypeVector{utf8()}, timestamp(),
                      kResultNullIfNull, "castTIMESTAMP_utf8",
+                     NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
+
+      NativeFunction("castTIMESTAMP_withCarrying", {}, DataTypeVector{utf8()}, timestamp(),
+                     kResultNullInternal, "castTIMESTAMP_withCarrying_utf8",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
 
       NativeFunction("castVARCHAR", {}, DataTypeVector{date32(), int64()}, utf8(),
@@ -151,6 +159,9 @@ std::vector<NativeFunction> GetDateTimeFunctionRegistry() {
 
       NativeFunction("unix_date", {}, DataTypeVector{date32()}, int32(),
                      kResultNullIfNull, "unix_date_date32"),
+
+      NativeFunction("unix_date_seconds", {}, DataTypeVector{date32()}, int64(),
+                     kResultNullIfNull, "unix_date_seconds_date32"),
 
       NativeFunction("unix_seconds", {}, DataTypeVector{timestampusutc()}, int64(),
                      kResultNullIfNull, "unix_seconds_timestampusutc"),

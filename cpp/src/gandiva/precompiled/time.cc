@@ -622,6 +622,71 @@ gdv_date64 castDATE_utf8(int64_t context, const char* input, gdv_int32 length) {
       .count();
 }
 
+// This function Will set result to be null if input is invalid, instead of throwing error.
+gdv_date64 castDATE_nullsafe_utf8(int64_t context, const char* input, gdv_int32 length, 
+                                  bool in_valid, bool* out_valid) {
+  if (!in_valid) {
+    *out_valid = false;
+    return 0;
+  }
+  using arrow_vendored::date::day;
+  using arrow_vendored::date::month;
+  using arrow_vendored::date::sys_days;
+  using arrow_vendored::date::year;
+  using arrow_vendored::date::year_month_day;
+  using gandiva::TimeFields;
+  // format : 0 is year, 1 is month and 2 is day.
+  int dateFields[3];
+  int dateIndex = 0, index = 0, value = 0;
+  int year_str_len = 0;
+  while (dateIndex < 3 && index < length) {
+    if (!isdigit(input[index])) {
+      dateFields[dateIndex++] = value;
+      value = 0;
+    } else {
+      value = (value * 10) + (input[index] - '0');
+      if (dateIndex == TimeFields::kYear) {
+        year_str_len++;
+      }
+    }
+    index++;
+  }
+
+  if (dateIndex < 3) {
+    // If we reached the end of input, we would have not encountered a separator
+    // store the last value
+    dateFields[dateIndex++] = value;
+  }
+  const char* msg = "Not a valid date value ";
+  if (dateIndex != 3) {
+    *out_valid = false;
+    return 0;
+  }
+
+  /* Handle two digit years
+   * If range of two digits is between 70 - 99 then year = 1970 - 1999
+   * Else if two digits is between 00 - 69 = 2000 - 2069
+   */
+  if (dateFields[TimeFields::kYear] < 100 && year_str_len < 4) {
+    if (dateFields[TimeFields::kYear] < 70) {
+      dateFields[TimeFields::kYear] += 2000;
+    } else {
+      dateFields[TimeFields::kYear] += 1900;
+    }
+  }
+  year_month_day date = year(dateFields[TimeFields::kYear]) /
+                        month(dateFields[TimeFields::kMonth]) /
+                        day(dateFields[TimeFields::kDay]);
+  if (!date.ok()) {
+    *out_valid = false;
+    return 0;
+  }
+  *out_valid = true;
+  return std::chrono::time_point_cast<std::chrono::milliseconds>(sys_days(date))
+      .time_since_epoch()
+      .count();
+}
+
 const char* castVARCHAR_date32_int64(gdv_int64 context, gdv_date32 in_day,
                                      gdv_int64 length, gdv_int32* out_len) {
   gdv_timestamp in = castDATE_date32(in_day);
@@ -798,6 +863,142 @@ gdv_timestamp castTIMESTAMP_utf8(int64_t context, const char* input, gdv_int32 l
   return std::chrono::time_point_cast<milliseconds>(date_time).time_since_epoch().count();
 }
 
+/*
+ * Input consists of mandatory and optional fields.
+ * Mandatory fields are year, month and day.
+ * Optional fields are time, displacement and zone.
+ * Format is <year-month-day>[ hours:minutes:seconds][.millis][ displacement|zone]
+ * This function will conduct carrying when the length of ms is greater than 3.
+ */
+gdv_timestamp castTIMESTAMP_withCarrying_utf8(int64_t context, const char* input,
+                                              gdv_int32 length, bool in_valid,
+                                              bool* out_valid) {
+  if (!in_valid) {
+    *out_valid = false;
+    return 0;
+  }
+  *out_valid = true;
+  using arrow_vendored::date::day;
+  using arrow_vendored::date::month;
+  using arrow_vendored::date::sys_days;
+  using arrow_vendored::date::year;
+  using arrow_vendored::date::year_month_day;
+  using gandiva::TimeFields;
+  using std::chrono::hours;
+  using std::chrono::milliseconds;
+  using std::chrono::minutes;
+  using std::chrono::seconds;
+
+  int ts_fields[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+  gdv_boolean add_displacement = true;
+  gdv_boolean encountered_zone = false;
+  int year_str_len = 0, sub_seconds_len = 0;
+  int ts_field_index = TimeFields::kYear, index = 0, value = 0;
+  while (ts_field_index < TimeFields::kMax && index < length) {
+    if (isdigit(input[index])) {
+      value = (value * 10) + (input[index] - '0');
+      if (ts_field_index == TimeFields::kYear) {
+        year_str_len++;
+      }
+      if (ts_field_index == TimeFields::kSubSeconds) {
+        sub_seconds_len++;
+      }
+    } else {
+      ts_fields[ts_field_index] = value;
+      value = 0;
+
+      switch (input[index]) {
+        case '.':
+        case ':':
+        case ' ':
+          ts_field_index++;
+          break;
+        case '+':
+          // +08:00, means time zone is 8 hours ahead. Need to subtract.
+          add_displacement = false;
+          ts_field_index = TimeFields::kDisplacementHours;
+          break;
+        case '-':
+          // Overloaded as date separator and negative displacement.
+          ts_field_index = (ts_field_index < 3) ? (ts_field_index + 1)
+                                                : TimeFields::kDisplacementHours;
+          break;
+        default:
+          encountered_zone = true;
+          break;
+      }
+    }
+    if (encountered_zone) {
+      break;
+    }
+    index++;
+  }
+
+  // Store the last value
+  if (ts_field_index < TimeFields::kMax) {
+    ts_fields[ts_field_index++] = value;
+  }
+
+  // adjust the year
+  if (ts_fields[TimeFields::kYear] < 100 && year_str_len < 4) {
+    if (ts_fields[TimeFields::kYear] < 70) {
+      ts_fields[TimeFields::kYear] += 2000;
+    } else {
+      ts_fields[TimeFields::kYear] += 1900;
+    }
+  }
+
+  // adjust the milliseconds
+  if (sub_seconds_len > 0) {
+    if (ts_fields[TimeFields::kSubSeconds] < 1000) {
+      while (sub_seconds_len < 3) {
+        ts_fields[TimeFields::kSubSeconds] *= 10;
+        sub_seconds_len++;
+      }
+    }
+  }
+  // handle timezone
+  if (encountered_zone) {
+    int err = 0;
+    gdv_timestamp ret_time = 0;
+    err = gdv_fn_time_with_zone(&ts_fields[0], (input + index), (length - index),
+                                &ret_time);
+    if (err) {
+      const char* msg = "Invalid timestamp or unknown zone for timestamp value ";
+      set_error_for_date(length, input, msg, context);
+      return 0;
+    }
+    return ret_time;
+  }
+
+  year_month_day date = year(ts_fields[TimeFields::kYear]) /
+                        month(ts_fields[TimeFields::kMonth]) /
+                        day(ts_fields[TimeFields::kDay]);
+  if (!date.ok()) {
+    *out_valid = false;
+    return 0;
+  }
+
+  if (!is_valid_time(ts_fields[TimeFields::kHours], ts_fields[TimeFields::kMinutes],
+                     ts_fields[TimeFields::kSeconds])) {
+    *out_valid = false;
+    return 0;
+  }
+
+  auto date_time = sys_days(date) + hours(ts_fields[TimeFields::kHours]) +
+                   minutes(ts_fields[TimeFields::kMinutes]) +
+                   seconds(ts_fields[TimeFields::kSeconds]) +
+                   milliseconds(ts_fields[TimeFields::kSubSeconds]);
+  if (ts_fields[TimeFields::kDisplacementHours] ||
+      ts_fields[TimeFields::kDisplacementMinutes]) {
+    auto displacement_time = hours(ts_fields[TimeFields::kDisplacementHours]) +
+                             minutes(ts_fields[TimeFields::kDisplacementMinutes]);
+    date_time = (add_displacement) ? (date_time + displacement_time)
+                                   : (date_time - displacement_time);
+  }
+  return std::chrono::time_point_cast<milliseconds>(date_time).time_since_epoch().count();
+}
+
 gdv_timestamp castTIMESTAMP_date64(gdv_date64 date_in_millis) { return date_in_millis; }
 
 gdv_timestamp castTIMESTAMP_int64(gdv_int64 in) { return in; }
@@ -831,7 +1032,8 @@ gdv_date32 castDATE32_date64(gdv_date64 date_in_millis) {
 }
 
 gdv_timestamp castTIMESTAMP_date32(gdv_date32 in_day) {
-  return static_cast<gdv_date32>(in_day * (MILLIS_IN_DAY));
+  int64_t in = (int64_t)in_day;
+  return in * MILLIS_IN_DAY;
 }
 
 gdv_date32 castDATE32_timestamp(gdv_timestamp timestamp_in_millis) {
@@ -968,6 +1170,12 @@ CAST_NULLABLE_INTERVAL_YEAR(int64)
 FORCE_INLINE
 gdv_int32 unix_date_date32(gdv_date32 in) {
   return in;
+}
+
+FORCE_INLINE
+gdv_int64 unix_date_seconds_date32(gdv_date32 in) {
+  gdv_int64 in_day = (gdv_int64)in;
+  return in_day * SECONDS_IN_HOUR * 24;
 }
 
 FORCE_INLINE

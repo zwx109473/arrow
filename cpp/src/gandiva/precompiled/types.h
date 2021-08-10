@@ -411,6 +411,9 @@ gdv_int32 utf8_last_char_pos(gdv_int64 context, const char* data, gdv_int32 data
 
 gdv_date64 castDATE_utf8(int64_t execution_context, const char* input, gdv_int32 length);
 
+gdv_date64 castDATE_nullsafe_utf8(int64_t execution_context, const char* input,
+                                  gdv_int32 length, bool in_valid, bool* out_valid);
+
 gdv_date64 castDATE_int64(gdv_int64 date);
 
 gdv_date64 castDATE_date32(gdv_date32 date);
@@ -419,6 +422,9 @@ gdv_date32 castDATE_int32(gdv_int32 date);
 
 gdv_timestamp castTIMESTAMP_utf8(int64_t execution_context, const char* input,
                                  gdv_int32 length);
+gdv_timestamp castTIMESTAMP_withCarrying_utf8(int64_t context, const char* input,
+                                              gdv_int32 length, bool in_valid,
+                                              bool* out_valid);
 gdv_timestamp castTIMESTAMP_date64(gdv_date64);
 gdv_timestamp castTIMESTAMP_int64(gdv_int64);
 gdv_date64 castDATE_timestamp(gdv_timestamp);
