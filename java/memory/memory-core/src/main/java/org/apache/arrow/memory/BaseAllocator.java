@@ -74,6 +74,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
   private final HistoricalLog historicalLog;
   private final RoundingPolicy roundingPolicy;
   private final AllocationManager.Factory allocationManagerFactory;
+  private final BufferLedger.Factory bufferLedgerFactory;
 
   private volatile boolean isClosed = false; // the allocator has been closed
 
@@ -94,6 +95,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
 
     this.listener = config.getListener();
     this.allocationManagerFactory = config.getAllocationManagerFactory();
+    this.bufferLedgerFactory = config.getBufferLedgerFactory();
 
     if (parentAllocator != null) {
       this.root = parentAllocator.root;
@@ -139,6 +141,11 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
     synchronized (childAllocators) {
       return new HashSet<>(childAllocators.keySet());
     }
+  }
+
+  @Override
+  public BufferLedger.Factory getBufferLedgerFactory() {
+    return bufferLedgerFactory;
   }
 
   private static String createErrorMsg(final BufferAllocator allocator, final long rounded, final long requested) {
@@ -343,6 +350,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
             .maxAllocation(maxAllocation)
             .roundingPolicy(roundingPolicy)
             .allocationManagerFactory(allocationManagerFactory)
+            .bufferLedgerFactory(bufferLedgerFactory)
             .build());
 
     if (DEBUG) {
@@ -719,13 +727,21 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
    * Config class of {@link BaseAllocator}.
    */
   @Value.Immutable
-  abstract static class Config {
+  public abstract static class Config {
     /**
      * Factory for creating {@link AllocationManager} instances.
      */
     @Value.Default
     AllocationManager.Factory getAllocationManagerFactory() {
       return DefaultAllocationManagerOption.getDefaultAllocationManagerFactory();
+    }
+
+    /**
+     * Factory for creating {@link BufferLedger} instances.
+     */
+    @Value.Default
+    BufferLedger.Factory getBufferLedgerFactory() {
+      return LegacyBufferLedger.FACTORY;
     }
 
     /**

@@ -1095,6 +1095,15 @@ public final class ArrowBuf implements AutoCloseable {
   }
 
   /**
+   * Create a logger of this {@link ArrowBuf}.
+   *
+   * @return the newly created logger
+   */
+  Logger createLogger() {
+    return new Logger(id, memoryAddress(), length, historicalLog);
+  }
+
+  /**
    * Prints information of this buffer into <code>sb</code> at the given
    * indentation and verbosity level.
    *
@@ -1103,12 +1112,7 @@ public final class ArrowBuf implements AutoCloseable {
    *
    */
   public void print(StringBuilder sb, int indent, Verbosity verbosity) {
-    CommonUtil.indent(sb, indent).append(toString());
-
-    if (BaseAllocator.DEBUG && verbosity.includeHistoricalLog) {
-      sb.append("\n");
-      historicalLog.buildHistory(sb, indent + 1, verbosity.includeStackTraces);
-    }
+    new Logger(id, addr, length, historicalLog).print(sb, indent, verbosity);
   }
 
   /**
@@ -1242,4 +1246,36 @@ public final class ArrowBuf implements AutoCloseable {
     }
   }
 
+  /**
+   * Create a logger for an {@link ArrowBuf}. This is currently used in debugging or historical logging
+   * in code of {@link BufferLedger} to avoid directly holding a strong reference to {@link ArrowBuf}.
+   * So that GC could be able to involved in auto cleaning logic in {@link AutoBufferLedger}.
+   */
+  static class Logger {
+    private final long id;
+    private final long addr;
+    private final long length;
+    private final HistoricalLog historicalLog;
+
+    public Logger(long id, long addr, long length, HistoricalLog historicalLog) {
+      this.id = id;
+      this.addr = addr;
+      this.length = length;
+      this.historicalLog = historicalLog;
+    }
+
+    public void print(StringBuilder sb, int indent, Verbosity verbosity) {
+      CommonUtil.indent(sb, indent).append(toString());
+
+      if (BaseAllocator.DEBUG && verbosity.includeHistoricalLog) {
+        sb.append("\n");
+        historicalLog.buildHistory(sb, indent + 1, verbosity.includeStackTraces);
+      }
+    }
+
+    @Override
+    public String toString() {
+      return String.format("ArrowBuf.Logger[%d], address:%d, length:%d", id, addr, length);
+    }
+  }
 }
