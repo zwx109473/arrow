@@ -175,6 +175,14 @@ public interface BufferAllocator extends AutoCloseable {
    */
   Collection<BufferAllocator> getChildAllocators();
 
+
+  /**
+   * Returns {@link BufferLedger.Factory} used by this allocator.
+   *
+   * @return the buffer ledger factory
+   */
+  BufferLedger.Factory getBufferLedgerFactory();
+
   /**
    * Create an allocation reservation. A reservation is a way of building up
    * a request for a buffer whose size is not known in advance. See
