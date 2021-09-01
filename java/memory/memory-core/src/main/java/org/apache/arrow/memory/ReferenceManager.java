@@ -21,43 +21,7 @@ package org.apache.arrow.memory;
  * Reference Manager manages one or more ArrowBufs that share the
  * reference count for the underlying memory chunk.
  */
-public interface ReferenceManager {
-
-  /**
-   * Return the reference count.
-   * @return reference count
-   */
-  int getRefCount();
-
-  /**
-   * Decrement this reference manager's reference count by 1 for the associated underlying
-   * memory. If the reference count drops to 0, it implies that ArrowBufs managed by this
-   * reference manager no longer need access to the underlying memory
-   * @return true if ref count has dropped to 0, false otherwise
-   */
-  boolean release();
-
-  /**
-   * Decrement this reference manager's reference count for the associated underlying
-   * memory. If the reference count drops to 0, it implies that ArrowBufs managed by this
-   * reference manager no longer need access to the underlying memory
-   * @param decrement the count to decrease the reference count by
-   * @return the new reference count
-   */
-  boolean release(int decrement);
-
-  /**
-   * Increment this reference manager's reference count by 1 for the associated underlying
-   * memory.
-   */
-  void retain();
-
-  /**
-   * Increment this reference manager's reference count by a given amount for the
-   * associated underlying memory.
-   * @param increment the count to increase the reference count by
-   */
-  void retain(int increment);
+public interface ReferenceManager extends ReferenceCountAware {
 
   /**
    * Create a new ArrowBuf that is associated with an alternative allocator for the purposes of
