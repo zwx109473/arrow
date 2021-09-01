@@ -106,7 +106,7 @@ public abstract class AllocationManager {
         return ledger;
       }
 
-      ledger = new BufferLedger(allocator, this);
+      ledger = allocator.getBufferLedgerFactory().create(allocator, this);
 
       if (retain) {
         // the new reference manager will have a ref count of 1

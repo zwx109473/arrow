@@ -21,6 +21,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.arrow.memory.util.MemoryUtil;
 import org.apache.arrow.util.VisibleForTesting;
 
 /**
@@ -29,20 +30,6 @@ import org.apache.arrow.util.VisibleForTesting;
  * "-XX:MaxDirectMemorySize".
  */
 public class DirectReservationListener implements ReservationListener {
-  private final Method methodReserve;
-  private final Method methodUnreserve;
-
-  private DirectReservationListener() {
-    try {
-      final Class<?> classBits = Class.forName("java.nio.Bits");
-      methodReserve = classBits.getDeclaredMethod("reserveMemory", long.class, int.class);
-      methodReserve.setAccessible(true);
-      methodUnreserve = classBits.getDeclaredMethod("unreserveMemory", long.class, int.class);
-      methodUnreserve.setAccessible(true);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   private static final DirectReservationListener INSTANCE = new DirectReservationListener();
 
@@ -55,14 +42,7 @@ public class DirectReservationListener implements ReservationListener {
    */
   @Override
   public void reserve(long size) {
-    try {
-      if (size > Integer.MAX_VALUE) {
-        throw new IllegalArgumentException("reserve size should not be larger than Integer.MAX_VALUE (0x7fffffff)");
-      }
-      methodReserve.invoke(null, (int) size, (int) size);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    MemoryUtil.reserveDirectMemory(size);
   }
 
   /**
@@ -70,14 +50,7 @@ public class DirectReservationListener implements ReservationListener {
    */
   @Override
   public void unreserve(long size) {
-    try {
-      if (size > Integer.MAX_VALUE) {
-        throw new IllegalArgumentException("unreserve size should not be larger than Integer.MAX_VALUE (0x7fffffff)");
-      }
-      methodUnreserve.invoke(null, (int) size, (int) size);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    MemoryUtil.unreserveDirectMemory(size);
   }
 
   /**
@@ -85,13 +58,6 @@ public class DirectReservationListener implements ReservationListener {
    */
   @VisibleForTesting
   public long getCurrentDirectMemReservation() {
-    try {
-      final Class<?> classBits = Class.forName("java.nio.Bits");
-      final Field f = classBits.getDeclaredField("reservedMemory");
-      f.setAccessible(true);
-      return ((AtomicLong) f.get(null)).get();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    return MemoryUtil.getCurrentDirectMemReservation();
   }
 }

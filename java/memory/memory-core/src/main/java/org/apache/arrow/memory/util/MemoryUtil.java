@@ -20,10 +20,14 @@ package org.apache.arrow.memory.util;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.arrow.util.VisibleForTesting;
 
 import sun.misc.Unsafe;
 
@@ -34,6 +38,10 @@ public class MemoryUtil {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MemoryUtil.class);
 
   private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
+  private static final Method DIRECT_MEMORY_RESERVE;
+  private static final Method DIRECT_MEMORY_UNRESERVE;
+  private static final Field DIRECT_MEMORY_COUNTER;
+
   /**
    * The unsafe object from which to access the off-heap memory.
    */
@@ -132,6 +140,48 @@ public class MemoryUtil {
         }
       }
       DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
+
+      DIRECT_MEMORY_RESERVE = AccessController.doPrivileged(new PrivilegedAction<Method>() {
+        @Override
+        public Method run() {
+          try {
+            final Class<?> classBits = Class.forName("java.nio.Bits");
+            Method methodReserve = classBits.getDeclaredMethod("reserveMemory", long.class, int.class);
+            methodReserve.setAccessible(true);
+            return methodReserve;
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
+
+      DIRECT_MEMORY_UNRESERVE = AccessController.doPrivileged(new PrivilegedAction<Method>() {
+        @Override
+        public Method run() {
+          try {
+            final Class<?> classBits = Class.forName("java.nio.Bits");
+            Method methodUnreserve = classBits.getDeclaredMethod("unreserveMemory", long.class, int.class);
+            methodUnreserve.setAccessible(true);
+            return methodUnreserve;
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
+
+      DIRECT_MEMORY_COUNTER = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+        @Override
+        public Field run() {
+          try {
+            final Class<?> classBits = Class.forName("java.nio.Bits");
+            final Field f = classBits.getDeclaredField("reservedMemory");
+            f.setAccessible(true);
+            return f;
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
     } catch (Throwable e) {
       throw new RuntimeException("Failed to initialize MemoryUtil.", e);
     }
@@ -166,5 +216,49 @@ public class MemoryUtil {
     }
     throw new UnsupportedOperationException(
         "sun.misc.Unsafe or java.nio.DirectByteBuffer.<init>(long, int) not available");
+  }
+
+  /**
+   * Reserve bytes from JVM direct memory. Garbage collection will be triggered once
+   * the total reserved amount reaches the limit specified via JVM option "-XX:MaxDirectMemorySize".
+   *
+   * @param size size in bytes to reserve
+   */
+  public static void reserveDirectMemory(long size) {
+    try {
+      if (size > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("reserve size should not be larger than Integer.MAX_VALUE (0x7fffffff)");
+      }
+      DIRECT_MEMORY_RESERVE.invoke(null, (int) size, (int) size);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Unreserve bytes from JVM direct memory.
+   *
+   * @param size size in bytes to unreserve
+   */
+  public static void unreserveDirectMemory(long size) {
+    try {
+      if (size > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("unreserve size should not be larger than Integer.MAX_VALUE (0x7fffffff)");
+      }
+      DIRECT_MEMORY_UNRESERVE.invoke(null, (int) size, (int) size);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Get current reservation of jVM direct memory. Visible for testing.
+   */
+  public static long getCurrentDirectMemReservation() {
+    try {
+      return ((AtomicLong) DIRECT_MEMORY_COUNTER.get(null)).get();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }
