@@ -60,8 +60,8 @@ public class NativeUnderlyingMemory extends AllocationManager {
     return new NativeUnderlyingMemory(bufferAllocator, size, nativeInstanceId, address);
   }
 
-  public BufferLedger associate(BufferAllocator allocator) {
-    return super.associate(allocator);
+  public ReferenceManager createReferenceManager(BufferAllocator allocator) {
+    return super.associate(allocator).newReferenceManager();
   }
 
   @Override

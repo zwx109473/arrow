@@ -35,10 +35,7 @@ import org.apache.arrow.flatbuf.KeyValue;
 import org.apache.arrow.flatbuf.Message;
 import org.apache.arrow.flatbuf.MessageHeader;
 import org.apache.arrow.flatbuf.RecordBatch;
-import org.apache.arrow.memory.ArrowBuf;
-import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.memory.BufferLedger;
-import org.apache.arrow.memory.NativeUnderlyingMemory;
+import org.apache.arrow.memory.*;
 import org.apache.arrow.memory.util.LargeMemoryUtil;
 import org.apache.arrow.util.Preconditions;
 import org.apache.arrow.vector.compression.NoCompressionCodec;
@@ -122,19 +119,19 @@ public class UnsafeRecordBatchSerializer {
             throw new IllegalArgumentException("Buffer count mismatch between metadata and native managed refs");
         }
 
-        final ArrayList<ArrowBuf> buffers = new ArrayList<>();
-        for (int i = 0; i < batchMeta.buffersLength(); i++) {
-            final Buffer bufferMeta = batchMeta.buffers(i);
-            final KeyValue keyValue = metaMessage.customMetadata(i); // custom metadata containing native buffer refs
-            final byte[] refDecoded = Base64.getDecoder().decode(keyValue.value());
-            final long nativeBufferRef = ByteBuffer.wrap(refDecoded).order(ByteOrder.LITTLE_ENDIAN).getLong();
-            final int size = LargeMemoryUtil.checkedCastToInt(bufferMeta.length());
-            final NativeUnderlyingMemory am = NativeUnderlyingMemory.create(allocator,
-                    size, nativeBufferRef, bufferMeta.offset());
-            BufferLedger ledger = am.associate(allocator);
-            ArrowBuf buf = new ArrowBuf(ledger, null, size, bufferMeta.offset());
-            buffers.add(buf);
-        }
+    final ArrayList<ArrowBuf> buffers = new ArrayList<>();
+    for (int i = 0; i < batchMeta.buffersLength(); i++) {
+      final Buffer bufferMeta = batchMeta.buffers(i);
+      final KeyValue keyValue = metaMessage.customMetadata(i); // custom metadata containing native buffer refs
+      final byte[] refDecoded = Base64.getDecoder().decode(keyValue.value());
+      final long nativeBufferRef = ByteBuffer.wrap(refDecoded).order(ByteOrder.LITTLE_ENDIAN).getLong();
+      final int size = LargeMemoryUtil.checkedCastToInt(bufferMeta.length());
+      final NativeUnderlyingMemory am = NativeUnderlyingMemory.create(allocator,
+          size, nativeBufferRef, bufferMeta.offset());
+      ReferenceManager rm = am.createReferenceManager(allocator);
+      ArrowBuf buf = new ArrowBuf(rm, null, size, bufferMeta.offset());
+      buffers.add(buf);
+    }
 
         try {
             final int numRows = LargeMemoryUtil.checkedCastToInt(batchMeta.length());
