@@ -279,7 +279,7 @@ Status SetMetadataForSingleField(std::shared_ptr<ArrayData> array_data,
                                  std::vector<ipc::internal::FieldMetadata>& nodes_meta,
                                  std::vector<ipc::internal::BufferMetadata>& buffers_meta,
                                  std::shared_ptr<KeyValueMetadata>& custom_metadata) {
-  nodes_meta.push_back({array_data->length, array_data->null_count, 0L});
+  nodes_meta.push_back({array_data->length, array_data->GetNullCount(), 0L});
 
   for (size_t i = 0; i < array_data->buffers.size(); i++) {
     auto buffer = array_data->buffers.at(i);
