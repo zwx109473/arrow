@@ -27,8 +27,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.arrow.util.VisibleForTesting;
-
 import sun.misc.Unsafe;
 
 /**

@@ -17,22 +17,23 @@
 
 package org.apache.arrow.memory;
 
-import org.apache.arrow.memory.util.MemoryUtil;
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
 
 /**
- * {@link AllocationListener} implementation to reserve bytes on JVM direct memory.
+ * Test cases for {@link MemoryChunk}.
  */
-public class DirectAllocationListener implements AllocationListener {
+public class TestMemoryChunk {
 
-  public static final DirectAllocationListener INSTANCE = new DirectAllocationListener();
+  @Test
+  public void testMemoryChunkType() {
 
-  @Override
-  public void onPreAllocation(long size) {
-    MemoryUtil.reserveDirectMemory(size);
-  }
+    // test unknown memory chunk type
+    System.clearProperty(DefaultMemoryChunkAllocatorOption.ALLOCATION_MANAGER_TYPE_PROPERTY_NAME);
+    DefaultMemoryChunkAllocatorOption.MemoryChunkAllocatorType chunkType =
+        DefaultMemoryChunkAllocatorOption.getDefaultMemoryChunkAllocatorType();
 
-  @Override
-  public void onRelease(long size) {
-    MemoryUtil.unreserveDirectMemory(size);
+    assertEquals(DefaultMemoryChunkAllocatorOption.MemoryChunkAllocatorType.Unknown, chunkType);
   }
 }

@@ -20,51 +20,44 @@ package org.apache.arrow.memory;
 import org.apache.arrow.memory.util.MemoryUtil;
 
 /**
- * Allocation manager based on unsafe API.
+ * The default Memory Chunk Allocator for a module.
+ *
+ * This is only used by tests and contains only a simplistic allocator method.
+ *
  */
-public final class UnsafeAllocationManager extends AllocationManager {
+public class DefaultMemoryChunkAllocator implements MemoryChunkAllocator {
 
+  public static final MemoryChunkAllocator ALLOCATOR = new DefaultMemoryChunkAllocator();
   private static final ArrowBuf EMPTY = new ArrowBuf(ReferenceManager.NO_OP,
       null,
       0,
-      MemoryUtil.UNSAFE.allocateMemory(0)
-  );
+      MemoryUtil.UNSAFE.allocateMemory(0));
 
-  public static final AllocationManager.Factory FACTORY = new Factory() {
-    @Override
-    public AllocationManager create(BufferAllocator accountingAllocator, long size) {
-      return new UnsafeAllocationManager(accountingAllocator, size);
-    }
+  @Override
+  public MemoryChunk allocate(long size) {
+    return new MemoryChunk() {
+      private final long allocatedSize = size;
+      private final long address = MemoryUtil.UNSAFE.allocateMemory(size);
 
-    @Override
-    public ArrowBuf empty() {
-      return EMPTY;
-    }
-  };
+      @Override
+      public long size() {
+        return allocatedSize;
+      }
 
-  private final long allocatedSize;
+      @Override
+      public long memoryAddress() {
+        return address;
+      }
 
-  private final long allocatedAddress;
-
-  UnsafeAllocationManager(BufferAllocator accountingAllocator, long requestedSize) {
-    super(accountingAllocator);
-    allocatedAddress = MemoryUtil.UNSAFE.allocateMemory(requestedSize);
-    allocatedSize = requestedSize;
+      @Override
+      public void destroy() {
+        MemoryUtil.UNSAFE.freeMemory(address);
+      }
+    };
   }
 
   @Override
-  public long getSize() {
-    return allocatedSize;
+  public ArrowBuf empty() {
+    return EMPTY;
   }
-
-  @Override
-  protected long memoryAddress() {
-    return allocatedAddress;
-  }
-
-  @Override
-  protected void release0() {
-    MemoryUtil.UNSAFE.freeMemory(allocatedAddress);
-  }
-
 }
