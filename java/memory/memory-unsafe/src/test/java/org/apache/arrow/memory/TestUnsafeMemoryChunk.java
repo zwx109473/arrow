@@ -23,12 +23,12 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 /**
- * Test cases for {@link UnsafeAllocationManager}.
+ * Test cases for {@link UnsafeMemoryChunk}.
  */
-public class TestUnsafeAllocationManager {
+public class TestUnsafeMemoryChunk {
 
   private BaseAllocator createUnsafeAllocator() {
-    return new RootAllocator(BaseAllocator.configBuilder().allocationManagerFactory(UnsafeAllocationManager.FACTORY)
+    return new RootAllocator(BaseAllocator.configBuilder().memoryChunkAllocator(UnsafeMemoryChunk.ALLOCATOR)
         .build());
   }
 
@@ -46,7 +46,7 @@ public class TestUnsafeAllocationManager {
   }
 
   /**
-   * Test the memory allocation for {@link UnsafeAllocationManager}.
+   * Test the memory allocation for {@link UnsafeMemoryChunk}.
    */
   @Test
   public void testBufferAllocation() {
@@ -56,12 +56,12 @@ public class TestUnsafeAllocationManager {
       assertTrue(buffer.getReferenceManager() instanceof BufferLedger);
       BufferLedger bufferLedger = (BufferLedger) buffer.getReferenceManager();
 
-      // make sure we are using unsafe allocation manager
-      AllocationManager allocMgr = bufferLedger.getAllocationManager();
-      assertTrue(allocMgr instanceof UnsafeAllocationManager);
-      UnsafeAllocationManager unsafeMgr = (UnsafeAllocationManager) allocMgr;
+      // make sure we are using unsafe memory chunk allocator
+      MemoryChunk chunk = bufferLedger.getMemoryChunkManager().getChunk();
+      assertTrue(chunk instanceof UnsafeMemoryChunk);
+      UnsafeMemoryChunk unsafeChunk = (UnsafeMemoryChunk) chunk;
 
-      assertEquals(bufSize, unsafeMgr.getSize());
+      assertEquals(bufSize, unsafeChunk.size());
       readWriteArrowBuf(buffer);
     }
   }

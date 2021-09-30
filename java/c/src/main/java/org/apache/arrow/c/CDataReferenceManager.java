@@ -87,6 +87,11 @@ final class CDataReferenceManager implements ReferenceManager {
   }
 
   @Override
+  public boolean isOpen() {
+    return getRefCount() > 0;
+  }
+
+  @Override
   public ArrowBuf retain(ArrowBuf srcBuffer, BufferAllocator targetAllocator) {
     retain();
 
