@@ -62,6 +62,13 @@ public class RootAllocator extends BaseAllocator {
   }
 
   /**
+   * Returns a builder class for configuring BaseAllocator's options.
+   */
+  public static ImmutableConfig.Builder configBuilder() {
+    return ImmutableConfig.builder();
+  }
+
+  /**
    * Verify the accounting state of the allocation system.
    */
   @VisibleForTesting

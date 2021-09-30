@@ -17,25 +17,22 @@
 
 package org.apache.arrow.memory;
 
-import static org.junit.Assert.assertEquals;
-
-import org.junit.Test;
-
 /**
- * Test cases for {@link AllocationManager}.
+ * The default Memory Chunk Allocator for a module.
+ *
  */
-public class TestAllocationManagerUnsafe {
+public class DefaultMemoryChunkAllocator implements MemoryChunkAllocator {
 
-  @Test
-  public void testAllocationManagerType() {
+  public static final MemoryChunkAllocator ALLOCATOR = NettyMemoryChunk.ALLOCATOR;
 
-    // test unsafe allocation manager type
-    System.setProperty(
-        DefaultAllocationManagerOption.ALLOCATION_MANAGER_TYPE_PROPERTY_NAME, "Unsafe");
-    DefaultAllocationManagerOption.AllocationManagerType mgrType =
-        DefaultAllocationManagerOption.getDefaultAllocationManagerType();
-
-    assertEquals(DefaultAllocationManagerOption.AllocationManagerType.Unsafe, mgrType);
-
+  @Override
+  public MemoryChunk allocate(long size) {
+    return ALLOCATOR.allocate(size);
   }
+
+  @Override
+  public ArrowBuf empty() {
+    return ALLOCATOR.empty();
+  }
+
 }

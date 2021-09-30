@@ -36,6 +36,7 @@ import org.apache.arrow.memory.AllocationOutcomeDetails.Entry;
 import org.apache.arrow.memory.rounding.RoundingPolicy;
 import org.apache.arrow.memory.rounding.SegmentRoundingPolicy;
 import org.apache.arrow.memory.util.AssertionUtil;
+import org.apache.arrow.memory.util.MemoryUtil;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
@@ -129,6 +130,43 @@ public class TestBaseAllocator {
              new RootAllocator(MAX_ALLOCATION)) {
       @SuppressWarnings("unused")
       final ArrowBuf arrowBuf = rootAllocator.buffer(0);
+    }
+  }
+
+  @Test
+  public void testAllocator_allocateUsingChunk() {
+    try (final RootAllocator rootAllocator =
+        new RootAllocator(MAX_ALLOCATION)) {
+      final Unsafe unsafe = MemoryUtil.UNSAFE;
+      final MemoryChunk chunk = new MemoryChunk() {
+        private final long size = 4L;
+        private final long address = unsafe.allocateMemory(size);
+
+        @Override
+        public long size() {
+          return size;
+        }
+
+        @Override
+        public long memoryAddress() {
+          return address;
+        }
+
+        @Override
+        public void destroy() {
+          unsafe.freeMemory(address);
+        }
+      };
+      assertEquals(0L, rootAllocator.getAllocatedMemory());
+      final ArrowBuf buffer = rootAllocator.buffer(chunk);
+      rootAllocator.verify();
+      assertNotEquals(0L, rootAllocator.getAllocatedMemory());
+      final int data = Integer.MAX_VALUE;
+      buffer.setInt(0L, data);
+      assertEquals(data, buffer.getInt(0L));
+      buffer.close();
+      rootAllocator.verify();
+      assertEquals(0L, rootAllocator.getAllocatedMemory());
     }
   }
 
@@ -363,8 +401,8 @@ public class TestBaseAllocator {
   }
 
   @Test
-  public void testCustomizedAllocationManager() {
-    try (BaseAllocator allocator = createAllocatorWithCustomizedAllocationManager()) {
+  public void testCustomizedMemoryChunkAllocator() {
+    try (BaseAllocator allocator = createAllocatorWithCustomizedMemoryChunkAllocator()) {
       final ArrowBuf arrowBuf1 = allocator.buffer(MAX_ALLOCATION);
       assertNotNull("allocation failed", arrowBuf1);
 
@@ -388,29 +426,29 @@ public class TestBaseAllocator {
     }
   }
 
-  private BaseAllocator createAllocatorWithCustomizedAllocationManager() {
+  private BaseAllocator createAllocatorWithCustomizedMemoryChunkAllocator() {
     return new RootAllocator(BaseAllocator.configBuilder()
         .maxAllocation(MAX_ALLOCATION)
-        .allocationManagerFactory(new AllocationManager.Factory() {
+        .memoryChunkAllocator(new MemoryChunkAllocator() {
           @Override
-          public AllocationManager create(BufferAllocator accountingAllocator, long requestedSize) {
-            return new AllocationManager(accountingAllocator) {
+          public MemoryChunk allocate(long requestedSize) {
+            return new MemoryChunk() {
               private final Unsafe unsafe = getUnsafe();
               private final long address = unsafe.allocateMemory(requestedSize);
 
               @Override
-              protected long memoryAddress() {
+              public long memoryAddress() {
                 return address;
               }
 
               @Override
-              protected void release0() {
+              public void destroy() {
                 unsafe.setMemory(address, requestedSize, (byte) 0);
                 unsafe.freeMemory(address);
               }
 
               @Override
-              public long getSize() {
+              public long size() {
                 return requestedSize;
               }
 

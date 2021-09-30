@@ -18,40 +18,24 @@
 package org.apache.arrow.memory;
 
 /**
- * Base interface for reference counted facilities.
+ * Factory interface of {@link MemoryChunk}.
  */
-public interface ReferenceCountAware {
-  /**
-   * Get current reference count.
-   *
-   * @return current reference count
-   */
-  int getRefCount();
+public interface MemoryChunkAllocator {
 
   /**
-   * Decrement reference count by 1.
+   * Allocate for new {@link MemoryChunk}.
    *
-   * @return true if reference count has dropped to 0
+   * @param requestedSize the requested size of memory chunk. This could be different from the actual size of the
+   *                      allocated chunk which can be accessed within {@link MemoryChunk#size()}.
+   * @return the newly created {@link MemoryChunk}
    */
-  boolean release();
+  MemoryChunk allocate(long requestedSize);
 
   /**
-   * Decrement reference count by specific amount of decrement.
+   * Return the empty {@link ArrowBuf} instance which internally holds a {@link MemoryChunk} within this allocator
+   * type.
    *
-   * @param decrement the count to decrease the reference count by
-   * @return true if reference count has dropped to 0
+   * @return the empty {@link ArrowBuf} instance.
    */
-  boolean release(int decrement);
-
-  /**
-   * Increment reference count by 1.
-   */
-  void retain();
-
-  /**
-   * Increment reference count by specific amount of increment.
-   *
-   * @param increment the count to increase the reference count by
-   */
-  void retain(int increment);
+  ArrowBuf empty();
 }

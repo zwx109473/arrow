@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 final class CheckAllocator {
   private static final Logger logger = LoggerFactory.getLogger(CheckAllocator.class);
-  private static final String ALLOCATOR_PATH = "org/apache/arrow/memory/DefaultAllocationManagerFactory.class";
+  private static final String ALLOCATOR_PATH = "org/apache/arrow/memory/DefaultMemoryChunkAllocator.class";
 
   private CheckAllocator() {
 
@@ -41,7 +41,7 @@ final class CheckAllocator {
     Set<URL> urls = scanClasspath();
     URL rootAllocator = assertOnlyOne(urls);
     reportResult(rootAllocator);
-    return "org.apache.arrow.memory.DefaultAllocationManagerFactory";
+    return "org.apache.arrow.memory.DefaultMemoryChunkAllocator";
   }
 
 
@@ -70,15 +70,15 @@ final class CheckAllocator {
   private static void reportResult(URL rootAllocator) {
     String path = rootAllocator.getPath();
     String subPath = path.substring(path.indexOf("memory"));
-    logger.info("Using DefaultAllocationManager at {}", subPath);
+    logger.info("Using DefaultMemoryChunkAllocator at {}", subPath);
   }
 
   private static URL assertOnlyOne(Set<URL> urls) {
     if (urls.size() > 1) {
-      logger.warn("More than one DefaultAllocationManager on classpath. Choosing first found");
+      logger.warn("More than one DefaultMemoryChunkAllocator on classpath. Choosing first found");
     }
     if (urls.isEmpty()) {
-      throw new RuntimeException("No DefaultAllocationManager found on classpath. Can't allocate Arrow buffers." +
+      throw new RuntimeException("No DefaultMemoryChunkAllocator found on classpath. Can't allocate Arrow buffers." +
           " Please consider adding arrow-memory-netty or arrow-memory-unsafe as a dependency.");
     }
     return urls.iterator().next();

@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.arrow.memory;
+package org.apache.arrow.dataset.jni;
 
 import static org.junit.Assert.*;
 
+import org.apache.arrow.memory.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,41 +47,41 @@ public class TestNativeUnderlyingMemory {
     final RootAllocator root = rootAllocator();
 
     final int size = 512;
-    final AllocationManager am = new MockUnderlyingMemory(root, size);
-    final BufferLedger ledger = am.associate(root);
+    final MemoryChunk chunk = new MockUnderlyingMemory(size);
+    final ArrowBuf buffer = root.buffer(chunk);
 
     assertEquals(size, root.getAllocatedMemory());
 
-    ledger.release();
+    buffer.close();
   }
 
   @Test
   public void testBufferTransfer() {
     final RootAllocator root = rootAllocator();
 
-    ChildAllocator allocator1 = (ChildAllocator) root.newChildAllocator("allocator1", 0, Long.MAX_VALUE);
-    ChildAllocator allocator2 = (ChildAllocator) root.newChildAllocator("allocator2", 0, Long.MAX_VALUE);
+    BufferAllocator allocator1 = root.newChildAllocator("allocator1", 0, Long.MAX_VALUE);
+    BufferAllocator allocator2 = root.newChildAllocator("allocator2", 0, Long.MAX_VALUE);
     assertEquals(0, allocator1.getAllocatedMemory());
     assertEquals(0, allocator2.getAllocatedMemory());
 
     final int size = 512;
-    final AllocationManager am = new MockUnderlyingMemory(allocator1, size);
+    final MemoryChunk chunk = new MockUnderlyingMemory(size);
+    final ArrowBuf buffer = allocator1.buffer(chunk);
 
-    final BufferLedger owningLedger = am.associate(allocator1);
-    assertEquals(size, owningLedger.getAccountedSize());
-    assertEquals(size, owningLedger.getSize());
+    assertEquals(size, buffer.getActualMemoryConsumed());
+    assertEquals(size, buffer.getPossibleMemoryConsumed());
     assertEquals(size, allocator1.getAllocatedMemory());
 
-    final BufferLedger transferredLedger = am.associate(allocator2);
-    owningLedger.release(); // release previous owner
-    assertEquals(0, owningLedger.getAccountedSize());
-    assertEquals(size, owningLedger.getSize());
-    assertEquals(size, transferredLedger.getAccountedSize());
-    assertEquals(size, transferredLedger.getSize());
+    final ArrowBuf transferredBuffer = buffer.getReferenceManager().retain(buffer, allocator2);
+    buffer.close(); // release previous owner
+    assertEquals(0, buffer.getActualMemoryConsumed());
+    assertEquals(size, buffer.getPossibleMemoryConsumed());
+    assertEquals(size, transferredBuffer.getActualMemoryConsumed());
+    assertEquals(size, transferredBuffer.getPossibleMemoryConsumed());
     assertEquals(0, allocator1.getAllocatedMemory());
     assertEquals(size, allocator2.getAllocatedMemory());
 
-    transferredLedger.release();
+    transferredBuffer.close();
     allocator1.close();
     allocator2.close();
   }
@@ -93,18 +94,18 @@ public class TestNativeUnderlyingMemory {
     /**
      * Constructor.
      */
-    MockUnderlyingMemory(BaseAllocator accountingAllocator, int size) {
-      super(accountingAllocator, size, -1L, -1L);
+    MockUnderlyingMemory(int size) {
+      super(size, -1L, -1L);
     }
 
     @Override
-    protected void release0() {
-      System.out.println("Underlying memory released. Size: " + getSize());
+    public void destroy() {
+      System.out.println("Underlying memory released. Size: " + size());
     }
 
     @Override
-    protected long memoryAddress() {
-      throw new UnsupportedOperationException();
+    public long memoryAddress() {
+      return -1L;
     }
   }
 }

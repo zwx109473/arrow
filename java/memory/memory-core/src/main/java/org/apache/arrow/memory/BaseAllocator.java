@@ -45,7 +45,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
   public static final boolean DEBUG;
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseAllocator.class);
 
-  // Initialize this before DEFAULT_CONFIG as DEFAULT_CONFIG will eventually initialize the allocation manager,
+  // Initialize this before DEFAULT_CONFIG as DEFAULT_CONFIG will eventually initialize the MemoryChunkManager,
   // which in turn allocates an ArrowBuf, which requires DEBUG to have been properly initialized
   static {
     // the system property takes precedence.
@@ -73,8 +73,8 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
   private final IdentityHashMap<Reservation, Object> reservations;
   private final HistoricalLog historicalLog;
   private final RoundingPolicy roundingPolicy;
-  private final AllocationManager.Factory allocationManagerFactory;
-  private final BufferLedger.Factory bufferLedgerFactory;
+  private final MemoryChunkAllocator memoryChunkAllocator;
+  private final MemoryChunkManager.Factory memoryChunkManagerFactory;
 
   private volatile boolean isClosed = false; // the allocator has been closed
 
@@ -94,8 +94,8 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
     super(parentAllocator, name, config.getInitReservation(), config.getMaxAllocation());
 
     this.listener = config.getListener();
-    this.allocationManagerFactory = config.getAllocationManagerFactory();
-    this.bufferLedgerFactory = config.getBufferLedgerFactory();
+    this.memoryChunkAllocator = config.getMemoryChunkAllocator();
+    this.memoryChunkManagerFactory = config.getMemoryChunkManagerFactory();
 
     if (parentAllocator != null) {
       this.root = parentAllocator.root;
@@ -143,11 +143,6 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
     }
   }
 
-  @Override
-  public BufferLedger.Factory getBufferLedgerFactory() {
-    return bufferLedgerFactory;
-  }
-
   private static String createErrorMsg(final BufferAllocator allocator, final long rounded, final long requested) {
     if (rounded != requested) {
       return String.format(
@@ -185,7 +180,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
   }
 
   /**
-   * For debug/verification purposes only. Allows an AllocationManager to tell the allocator that
+   * For debug/verification purposes only. Allows an MemoryChunkManager to tell the allocator that
    * we have a new ledger
    * associated with this allocator.
    */
@@ -199,7 +194,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
   }
 
   /**
-   * For debug/verification purposes only. Allows an AllocationManager to tell the allocator that
+   * For debug/verification purposes only. Allows an MemoryChunkManager to tell the allocator that
    * we are removing a
    * ledger associated with this allocator
    */
@@ -242,17 +237,37 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
 
   @Override
   public ArrowBuf buffer(final long initialRequestSize) {
-    assertOpen();
-
-    return buffer(initialRequestSize, null);
+    return buffer(initialRequestSize, memoryChunkAllocator, true, null);
   }
 
   private ArrowBuf createEmpty() {
-    return allocationManagerFactory.empty();
+    return memoryChunkAllocator.empty();
   }
 
   @Override
   public ArrowBuf buffer(final long initialRequestSize, BufferManager manager) {
+    return buffer(initialRequestSize, memoryChunkAllocator, true, manager);
+  }
+
+  @Override
+  public ArrowBuf buffer(MemoryChunk chunk) {
+    final long size = chunk.size();
+    return buffer(size, new MemoryChunkAllocator() {
+      @Override
+      public MemoryChunk allocate(long requestedSize) {
+        Preconditions.checkState(requestedSize == size);
+        return chunk;
+      }
+
+      @Override
+      public ArrowBuf empty() {
+        throw new UnsupportedOperationException();
+      }
+    }, false, null);
+  }
+
+  private ArrowBuf buffer(final long initialRequestSize, MemoryChunkAllocator chunkAllocator, boolean round,
+      BufferManager manager) {
     assertOpen();
 
     Preconditions.checkArgument(initialRequestSize >= 0, "the requested size must be non-negative");
@@ -262,7 +277,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
     }
 
     // round the request size according to the rounding policy
-    final long actualRequestSize = roundingPolicy.getRoundedSize(initialRequestSize);
+    final long actualRequestSize = round ? roundingPolicy.getRoundedSize(initialRequestSize) : initialRequestSize;
 
     listener.onPreAllocation(actualRequestSize);
 
@@ -280,7 +295,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
 
     boolean success = false;
     try {
-      ArrowBuf buffer = bufferWithoutReservation(actualRequestSize, manager);
+      ArrowBuf buffer = bufferWithoutReservation(actualRequestSize, chunkAllocator, manager);
       success = true;
       listener.onAllocation(actualRequestSize);
       return buffer;
@@ -299,10 +314,11 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
    */
   private ArrowBuf bufferWithoutReservation(
       final long size,
+      MemoryChunkAllocator chunkAllocator,
       BufferManager bufferManager) throws OutOfMemoryException {
     assertOpen();
 
-    final AllocationManager manager = newAllocationManager(size);
+    final MemoryChunkManager manager = newMemoryChunkManager(chunkAllocator, size);
     final BufferLedger ledger = manager.associate(this); // +1 ref cnt (required)
     final ArrowBuf buffer = ledger.newArrowBuf(size, bufferManager);
 
@@ -313,13 +329,9 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
     return buffer;
   }
 
-  private AllocationManager newAllocationManager(long size) {
-    return newAllocationManager(this, size);
-  }
-
-
-  private AllocationManager newAllocationManager(BaseAllocator accountingAllocator, long size) {
-    return allocationManagerFactory.create(accountingAllocator, size);
+  private MemoryChunkManager newMemoryChunkManager(MemoryChunkAllocator chunkAllocator,
+      long size) {
+    return memoryChunkManagerFactory.create(chunkAllocator.allocate(size));
   }
 
   @Override
@@ -349,8 +361,8 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
             .initReservation(initReservation)
             .maxAllocation(maxAllocation)
             .roundingPolicy(roundingPolicy)
-            .allocationManagerFactory(allocationManagerFactory)
-            .bufferLedgerFactory(bufferLedgerFactory)
+            .memoryChunkManagerFactory(memoryChunkManagerFactory)
+            .memoryChunkAllocator(memoryChunkAllocator)
             .build());
 
     if (DEBUG) {
@@ -385,6 +397,8 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
     }
 
     isClosed = true;
+
+    memoryChunkManagerFactory.close();
 
     StringBuilder outstandingChildAllocators = new StringBuilder();
     if (DEBUG) {
@@ -494,7 +508,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
    * @throws IllegalStateException when any problems are found
    */
   void verifyAllocator() {
-    final IdentityHashMap<AllocationManager, BaseAllocator> seen = new IdentityHashMap<>();
+    final IdentityHashMap<MemoryChunkManager, BaseAllocator> seen = new IdentityHashMap<>();
     verifyAllocator(seen);
   }
 
@@ -508,7 +522,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
    * @throws IllegalStateException when any problems are found
    */
   private void verifyAllocator(
-      final IdentityHashMap<AllocationManager, BaseAllocator> buffersSeen) {
+      final IdentityHashMap<MemoryChunkManager, BaseAllocator> buffersSeen) {
     // The remaining tests can only be performed if we're in debug mode.
     if (!DEBUG) {
       return;
@@ -555,7 +569,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
           continue;
         }
 
-        final AllocationManager am = ledger.getAllocationManager();
+        final MemoryChunkManager am = ledger.getMemoryChunkManager();
         /*
          * Even when shared, ArrowBufs are rewrapped, so we should never see the same instance
          * twice.
@@ -679,7 +693,7 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
       if (!ledger.isOwningLedger()) {
         continue;
       }
-      final AllocationManager am = ledger.getAllocationManager();
+      final MemoryChunkManager am = ledger.getMemoryChunkManager();
       sb.append("UnsafeDirectLittleEndian[identityHashCode == ");
       sb.append(Integer.toString(System.identityHashCode(am)));
       sb.append("] size ");
@@ -729,19 +743,19 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
   @Value.Immutable
   public abstract static class Config {
     /**
-     * Factory for creating {@link AllocationManager} instances.
+     * Factory for creating {@link MemoryChunkManager} instances.
      */
     @Value.Default
-    AllocationManager.Factory getAllocationManagerFactory() {
-      return DefaultAllocationManagerOption.getDefaultAllocationManagerFactory();
+    MemoryChunkManager.Factory getMemoryChunkManagerFactory() {
+      return MemoryChunkManager.FACTORY;
     }
 
     /**
-     * Factory for creating {@link BufferLedger} instances.
+     * Factory for creating {@link MemoryChunk} instances.
      */
     @Value.Default
-    BufferLedger.Factory getBufferLedgerFactory() {
-      return LegacyBufferLedger.FACTORY;
+    MemoryChunkAllocator getMemoryChunkAllocator() {
+      return DefaultMemoryChunkAllocatorOption.getDefaultMemoryChunkAllocator();
     }
 
     /**
@@ -927,7 +941,8 @@ abstract class BaseAllocator extends Accountant implements BufferAllocator {
        * as well, so we need to return the same number back to avoid double-counting them.
        */
       try {
-        final ArrowBuf arrowBuf = BaseAllocator.this.bufferWithoutReservation(nBytes, null);
+        final ArrowBuf arrowBuf = BaseAllocator.this.bufferWithoutReservation(nBytes,
+            memoryChunkAllocator, null);
 
         listener.onAllocation(nBytes);
         if (DEBUG) {

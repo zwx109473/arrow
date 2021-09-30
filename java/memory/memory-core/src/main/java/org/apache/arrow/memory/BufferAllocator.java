@@ -50,6 +50,15 @@ public interface BufferAllocator extends AutoCloseable {
   ArrowBuf buffer(long size, BufferManager manager);
 
   /**
+   * Allocate a new buffer using the given memory chunk. The output buffer size will equal
+   * to the chunk size by default.
+   *
+   * @param chunk A memory chunk.
+   * @return a new ArrowBuf
+   */
+  ArrowBuf buffer(MemoryChunk chunk);
+
+  /**
    * Get the root allocator of this allocator. If this allocator is already a root, return
    * this directly.
    *
@@ -171,14 +180,6 @@ public interface BufferAllocator extends AutoCloseable {
    * @return set of child allocators
    */
   Collection<BufferAllocator> getChildAllocators();
-
-
-  /**
-   * Returns {@link BufferLedger.Factory} used by this allocator.
-   *
-   * @return the buffer ledger factory
-   */
-  BufferLedger.Factory getBufferLedgerFactory();
 
   /**
    * Create an allocation reservation. A reservation is a way of building up
