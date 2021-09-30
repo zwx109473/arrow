@@ -21,7 +21,50 @@ package org.apache.arrow.memory;
  * Reference Manager manages one or more ArrowBufs that share the
  * reference count for the underlying memory chunk.
  */
-public interface ReferenceManager extends ReferenceCountAware {
+public interface ReferenceManager {
+
+  /**
+   * Return the reference count.
+   * @return reference count
+   */
+  int getRefCount();
+
+  /**
+   * Decrement this reference manager's reference count by 1 for the associated underlying
+   * memory. If the reference count drops to 0, it implies that ArrowBufs managed by this
+   * reference manager no longer need access to the underlying memory
+   * @return true if ref count has dropped to 0, false otherwise
+   */
+  boolean release();
+
+  /**
+   * Decrement this reference manager's reference count for the associated underlying
+   * memory. If the reference count drops to 0, it implies that ArrowBufs managed by this
+   * reference manager no longer need access to the underlying memory
+   * @param decrement the count to decrease the reference count by
+   * @return the new reference count
+   */
+  boolean release(int decrement);
+
+  /**
+   * Increment this reference manager's reference count by 1 for the associated underlying
+   * memory.
+   */
+  void retain();
+
+  /**
+   * Increment this reference manager's reference count by a given amount for the
+   * associated underlying memory.
+   * @param increment the count to increase the reference count by
+   */
+  void retain(int increment);
+
+  /**
+   * Whether this reference manager ensures that the ArrowBuf's memory address is now available for reading.
+   *
+   * @return true if the ArrowBuf's memory memory address is available for reading, false if invalid
+   */
+  boolean isOpen();
 
   /**
    * Create a new ArrowBuf that is associated with an alternative allocator for the purposes of
@@ -29,7 +72,7 @@ public interface ReferenceManager extends ReferenceCountAware {
    * ArrowBuf except in the situation where the passed in Allocator is the same as the current buffer.
    * This operation has no impact on the reference count of this ArrowBuf. The newly created
    * ArrowBuf with either have a reference count of 1 (in the case that this is the first time this
-   * memory is being associated with the target allocator or in other words allocation manager currently
+   * memory is being associated with the target allocator or in other words MemoryChunkManager currently
    * doesn't hold a mapping for the target allocator) or the current value of the reference count for
    * the target allocator-reference manager combination + 1 in the case that the provided allocator
    * already had an association to this underlying memory.
@@ -104,6 +147,11 @@ public interface ReferenceManager extends ReferenceCountAware {
 
     @Override
     public void retain(int increment) { }
+
+    @Override
+    public boolean isOpen() {
+      return true;
+    }
 
     @Override
     public ArrowBuf retain(ArrowBuf srcBuffer, BufferAllocator targetAllocator) {

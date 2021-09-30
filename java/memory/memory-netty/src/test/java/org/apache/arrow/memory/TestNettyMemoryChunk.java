@@ -25,18 +25,19 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 /**
- * Test cases for {@link NettyAllocationManager}.
+ * Test cases for {@link NettyMemoryChunk}.
  */
-public class TestNettyAllocationManager {
+public class TestNettyMemoryChunk {
 
   static int CUSTOMIZED_ALLOCATION_CUTOFF_VALUE = 1024;
 
   private BaseAllocator createCustomizedAllocator() {
     return new RootAllocator(BaseAllocator.configBuilder()
-        .allocationManagerFactory(new AllocationManager.Factory() {
+        .memoryChunkAllocator(new MemoryChunkAllocator() {
+
           @Override
-          public AllocationManager create(BufferAllocator accountingAllocator, long size) {
-            return new NettyAllocationManager(accountingAllocator, size, CUSTOMIZED_ALLOCATION_CUTOFF_VALUE);
+          public MemoryChunk allocate(long requestedSize) {
+            return new NettyMemoryChunk(requestedSize, CUSTOMIZED_ALLOCATION_CUTOFF_VALUE);
           }
 
           @Override
@@ -71,13 +72,13 @@ public class TestNettyAllocationManager {
       assertTrue(buffer.getReferenceManager() instanceof BufferLedger);
       BufferLedger bufferLedger = (BufferLedger) buffer.getReferenceManager();
 
-      // make sure we are using netty allocation manager
-      AllocationManager allocMgr = bufferLedger.getAllocationManager();
-      assertTrue(allocMgr instanceof NettyAllocationManager);
-      NettyAllocationManager nettyMgr = (NettyAllocationManager) allocMgr;
+      // make sure we are using netty memory chunk allocator
+      MemoryChunk chunk = bufferLedger.getMemoryChunkManager().getChunk();
+      assertTrue(chunk instanceof NettyMemoryChunk);
+      NettyMemoryChunk nettyChunk = (NettyMemoryChunk) chunk;
 
       // for the small buffer allocation strategy, the chunk is not null
-      assertNotNull(nettyMgr.getMemoryChunk());
+      assertNotNull(nettyChunk.getNettyBuf());
 
       readWriteArrowBuf(buffer);
     }
@@ -94,13 +95,13 @@ public class TestNettyAllocationManager {
       assertTrue(buffer.getReferenceManager() instanceof BufferLedger);
       BufferLedger bufferLedger = (BufferLedger) buffer.getReferenceManager();
 
-      // make sure we are using netty allocation manager
-      AllocationManager allocMgr = bufferLedger.getAllocationManager();
-      assertTrue(allocMgr instanceof NettyAllocationManager);
-      NettyAllocationManager nettyMgr = (NettyAllocationManager) allocMgr;
+      // make sure we are using unsafe memory chunk allocator
+      MemoryChunk chunk = bufferLedger.getMemoryChunkManager().getChunk();
+      assertTrue(chunk instanceof NettyMemoryChunk);
+      NettyMemoryChunk nettyChunk = (NettyMemoryChunk) chunk;
 
       // for the large buffer allocation strategy, the chunk is null
-      assertNull(nettyMgr.getMemoryChunk());
+      assertNull(nettyChunk.getNettyBuf());
 
       readWriteArrowBuf(buffer);
     }

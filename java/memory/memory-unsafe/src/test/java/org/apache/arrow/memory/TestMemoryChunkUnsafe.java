@@ -22,18 +22,20 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
 /**
- * Test cases for {@link AllocationManager}.
+ * Test cases for {@link MemoryChunk}.
  */
-public class TestAllocationManager {
+public class TestMemoryChunkUnsafe {
 
   @Test
-  public void testAllocationManagerType() {
+  public void testMemoryChunkType() {
 
-    // test unknown allocation manager type
-    System.clearProperty(DefaultAllocationManagerOption.ALLOCATION_MANAGER_TYPE_PROPERTY_NAME);
-    DefaultAllocationManagerOption.AllocationManagerType mgrType =
-        DefaultAllocationManagerOption.getDefaultAllocationManagerType();
+    // test unsafe memory chunk type
+    System.setProperty(
+        DefaultMemoryChunkAllocatorOption.ALLOCATION_MANAGER_TYPE_PROPERTY_NAME, "Unsafe");
+    DefaultMemoryChunkAllocatorOption.MemoryChunkAllocatorType chunkType =
+        DefaultMemoryChunkAllocatorOption.getDefaultMemoryChunkAllocatorType();
 
-    assertEquals(DefaultAllocationManagerOption.AllocationManagerType.Unknown, mgrType);
+    assertEquals(DefaultMemoryChunkAllocatorOption.MemoryChunkAllocatorType.Unsafe, chunkType);
+
   }
 }
