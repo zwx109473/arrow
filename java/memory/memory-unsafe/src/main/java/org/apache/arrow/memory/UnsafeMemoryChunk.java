@@ -20,44 +20,51 @@ package org.apache.arrow.memory;
 import org.apache.arrow.memory.util.MemoryUtil;
 
 /**
- * The default Allocation Manager Factory for a module.
- *
- * This is only used by tests and contains only a simplistic allocator method.
- *
+ * Memory chunk allocator based on unsafe API.
  */
-public class DefaultAllocationManagerFactory implements AllocationManager.Factory {
+public final class UnsafeMemoryChunk implements MemoryChunk {
 
-  public static final AllocationManager.Factory FACTORY = new DefaultAllocationManagerFactory();
   private static final ArrowBuf EMPTY = new ArrowBuf(ReferenceManager.NO_OP,
       null,
       0,
-      MemoryUtil.UNSAFE.allocateMemory(0));
+      MemoryUtil.UNSAFE.allocateMemory(0)
+  );
 
-  @Override
-  public AllocationManager create(BufferAllocator accountingAllocator, long size) {
-    return new AllocationManager(accountingAllocator) {
-      private final long allocatedSize = size;
-      private final long address = MemoryUtil.UNSAFE.allocateMemory(size);
+  public static final MemoryChunkAllocator ALLOCATOR = new MemoryChunkAllocator() {
 
-      @Override
-      public long getSize() {
-        return allocatedSize;
-      }
+    @Override
+    public MemoryChunk allocate(long requestedSize) {
+      return new UnsafeMemoryChunk(requestedSize);
+    }
 
-      @Override
-      protected long memoryAddress() {
-        return address;
-      }
+    @Override
+    public ArrowBuf empty() {
+      return EMPTY;
+    }
+  };
 
-      @Override
-      protected void release0() {
-        MemoryUtil.UNSAFE.freeMemory(address);
-      }
-    };
+  private final long allocatedSize;
+
+  private final long allocatedAddress;
+
+  UnsafeMemoryChunk(long requestedSize) {
+    allocatedAddress = MemoryUtil.UNSAFE.allocateMemory(requestedSize);
+    allocatedSize = requestedSize;
   }
 
   @Override
-  public ArrowBuf empty() {
-    return EMPTY;
+  public long size() {
+    return allocatedSize;
   }
+
+  @Override
+  public long memoryAddress() {
+    return allocatedAddress;
+  }
+
+  @Override
+  public void destroy() {
+    MemoryUtil.UNSAFE.freeMemory(allocatedAddress);
+  }
+
 }

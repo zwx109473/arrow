@@ -17,21 +17,23 @@
 
 package org.apache.arrow.memory;
 
+import org.apache.arrow.util.VisibleForTesting;
+
 import io.netty.buffer.PooledByteBufAllocatorL;
 import io.netty.buffer.UnsafeDirectLittleEndian;
 import io.netty.util.internal.PlatformDependent;
 
 /**
- * The default implementation of {@link AllocationManager}. The implementation is responsible for managing when memory
- * is allocated and returned to the Netty-based PooledByteBufAllocatorL.
+ * The default implementation of {@link MemoryChunk}. The implementation is responsible for managing when
+ * memory is allocated and returned to the Netty-based PooledByteBufAllocatorL.
  */
-public class NettyAllocationManager extends AllocationManager {
+public class NettyMemoryChunk implements MemoryChunk {
 
-  public static final AllocationManager.Factory FACTORY = new AllocationManager.Factory() {
+  public static final MemoryChunkAllocator ALLOCATOR = new MemoryChunkAllocator() {
 
     @Override
-    public AllocationManager create(BufferAllocator accountingAllocator, long size) {
-      return new NettyAllocationManager(accountingAllocator, size);
+    public MemoryChunk allocate(long requestedSize) {
+      return new NettyMemoryChunk(requestedSize);
     }
 
     @Override
@@ -53,11 +55,10 @@ public class NettyAllocationManager extends AllocationManager {
   static final ArrowBuf EMPTY_BUFFER = new ArrowBuf(ReferenceManager.NO_OP,
       null,
       0,
-      NettyAllocationManager.EMPTY.memoryAddress());
-  static final long CHUNK_SIZE = INNER_ALLOCATOR.getChunkSize();
+      NettyMemoryChunk.EMPTY.memoryAddress());
 
   private final long allocatedSize;
-  private final UnsafeDirectLittleEndian memoryChunk;
+  private final UnsafeDirectLittleEndian nettyBuf;
   private final long allocatedAddress;
 
   /**
@@ -65,58 +66,55 @@ public class NettyAllocationManager extends AllocationManager {
    */
   private final int allocationCutOffValue;
 
-  NettyAllocationManager(BufferAllocator accountingAllocator, long requestedSize, int allocationCutOffValue) {
-    super(accountingAllocator);
+  NettyMemoryChunk(long requestedSize, int allocationCutOffValue) {
     this.allocationCutOffValue = allocationCutOffValue;
 
     if (requestedSize > allocationCutOffValue) {
-      this.memoryChunk = null;
+      this.nettyBuf = null;
       this.allocatedAddress = PlatformDependent.allocateMemory(requestedSize);
       this.allocatedSize = requestedSize;
     } else {
-      this.memoryChunk = INNER_ALLOCATOR.allocate(requestedSize);
-      this.allocatedAddress = memoryChunk.memoryAddress();
-      this.allocatedSize = memoryChunk.capacity();
+      this.nettyBuf = INNER_ALLOCATOR.allocate(requestedSize);
+      this.allocatedAddress = nettyBuf.memoryAddress();
+      this.allocatedSize = nettyBuf.capacity();
     }
   }
 
-  NettyAllocationManager(BufferAllocator accountingAllocator, long requestedSize) {
-    this(accountingAllocator, requestedSize, DEFAULT_ALLOCATION_CUTOFF_VALUE);
+  NettyMemoryChunk(long requestedSize) {
+    this(requestedSize, DEFAULT_ALLOCATION_CUTOFF_VALUE);
   }
 
   /**
-   * Get the underlying memory chunk managed by this AllocationManager.
+   * Get the underlying netty buffer managed by this MemoryChunk.
    * @return the underlying memory chunk if the request size is not greater than the
-   *   {@link NettyAllocationManager#allocationCutOffValue}, or null otherwise.
-   *
-   * @deprecated this method will be removed in a future release.
+   *   {@link NettyMemoryChunk#allocationCutOffValue}, or null otherwise.
    */
-  @Deprecated
-  UnsafeDirectLittleEndian getMemoryChunk() {
-    return memoryChunk;
+  @VisibleForTesting
+  UnsafeDirectLittleEndian getNettyBuf() {
+    return nettyBuf;
   }
 
   @Override
-  protected long memoryAddress() {
+  public long memoryAddress() {
     return allocatedAddress;
   }
 
   @Override
-  protected void release0() {
-    if (memoryChunk == null) {
+  public void destroy() {
+    if (nettyBuf == null) {
       PlatformDependent.freeMemory(allocatedAddress);
     } else {
-      memoryChunk.release();
+      nettyBuf.release();
     }
   }
 
   /**
    * Returns the underlying memory chunk size managed.
    *
-   * <p>NettyAllocationManager rounds requested size up to the next power of two.
+   * <p>NettyMemoryChunk rounds requested size up to the next power of two.
    */
   @Override
-  public long getSize() {
+  public long size() {
     return allocatedSize;
   }
 

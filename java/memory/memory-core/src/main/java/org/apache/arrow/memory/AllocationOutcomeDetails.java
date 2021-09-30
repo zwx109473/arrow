@@ -24,10 +24,11 @@ import java.util.Deque;
  * Captures details of allocation for each accountant in the hierarchical chain.
  */
 public class AllocationOutcomeDetails {
-  Deque<Entry> allocEntries;
+  final Accountant accountant;
+  final Deque<Entry> allocEntries = new ArrayDeque<>();
 
-  AllocationOutcomeDetails() {
-    allocEntries = new ArrayDeque<>();
+  AllocationOutcomeDetails(Accountant accountant) {
+    this.accountant = accountant;
   }
 
   void pushEntry(Accountant accountant, long totalUsedBeforeAllocation, long requestedSize,

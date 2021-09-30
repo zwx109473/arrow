@@ -97,7 +97,7 @@ class Accountant implements AutoCloseable {
     } else {
       // Try again, but with details this time.
       // Populating details only on failures avoids performance overhead in the common case (success case).
-      AllocationOutcomeDetails details = new AllocationOutcomeDetails();
+      AllocationOutcomeDetails details = new AllocationOutcomeDetails(this);
       status = allocateBytesInternal(size, details);
       return new AllocationOutcome(status, details);
     }
