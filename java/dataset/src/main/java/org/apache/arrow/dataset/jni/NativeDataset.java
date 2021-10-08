@@ -43,7 +43,7 @@ public class NativeDataset implements Dataset {
     long scannerId = JniWrapper.get().createScanner(datasetId, options.getColumns(),
             options.getFilter().toByteArray(), options.getBatchSize(),
         context.getMemoryPool().getNativeInstanceId());
-    return new NativeScanner(context, scannerId);
+    return new NativeScanner(context, options, scannerId);
   }
 
   @Override

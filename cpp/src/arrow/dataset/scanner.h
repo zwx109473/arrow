@@ -274,7 +274,10 @@ class ARROW_DS_EXPORT Scanner {
   /// much in memory (this is goverended by the readahead options and use_threads option).
   /// If the readahead queue fills up then I/O will pause until the calling thread catches
   /// up.
-  virtual Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilter() = 0;
+  ///
+  /// Filter and Project expressions in ScanOption will be not executed individually and
+  /// will be only recognized by the underlying file format.
+  virtual Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilterProject() = 0;
   /// \brief Scan the dataset into a stream of record batches.  Unlike ScanBatches this
   /// method may allow record batches to be returned out of order.  This allows for more
   /// efficient scanning: some fragments may be accessed more quickly than others (e.g.

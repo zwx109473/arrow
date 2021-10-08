@@ -267,7 +267,7 @@ class ARROW_DS_EXPORT SyncScanner : public Scanner {
       : Scanner(std::move(scan_options)), fragment_(std::move(fragment)) {}
 
   Result<TaggedRecordBatchIterator> ScanBatches() override;
-  Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilter() override;
+  Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilterProject() override;
   Result<ScanTaskIterator> Scan() override;
   Status Scan(std::function<Status(TaggedRecordBatch)> visitor) override;
   Result<std::shared_ptr<Table>> ToTable() override;
@@ -298,21 +298,11 @@ Result<TaggedRecordBatchIterator> SyncScanner::ScanBatches() {
   });
 }
 
-Result<TaggedRecordBatchIterator> SyncScanner::ScanBatchesWithWeakFilter() {
+Result<TaggedRecordBatchIterator> SyncScanner::ScanBatchesWithWeakFilterProject() {
   ARROW_ASSIGN_OR_RAISE(auto fragment_it, GetFragments())
   auto fn = [this](const std::shared_ptr<Fragment>& fragment) -> Result<ScanTaskIterator> {
     ARROW_ASSIGN_OR_RAISE(auto scan_task_it, fragment->Scan(scan_options_));
-
-    auto partition = fragment->partition_expression();
-    // Apply the projection to incoming RecordBatches by
-    // wrapping the ScanTask with a FilterAndProjectScanTask,
-    // ignore filters.
-    auto wrap_scan_task =
-        [partition](std::shared_ptr<ScanTask> task) -> std::shared_ptr<ScanTask> {
-          return std::make_shared<ProjectScanTask>(std::move(task), partition);
-        };
-
-    return MakeMapIterator(wrap_scan_task, std::move(scan_task_it));
+    return std::move(scan_task_it);
   };
 
   // Iterator<Iterator<ScanTask>>
@@ -395,7 +385,7 @@ class ARROW_DS_EXPORT AsyncScanner : public Scanner,
 
   Status Scan(std::function<Status(TaggedRecordBatch)> visitor) override;
   Result<TaggedRecordBatchIterator> ScanBatches() override;
-  Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilter() override;
+  Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilterProject() override;
   Result<EnumeratedRecordBatchIterator> ScanBatchesUnordered() override;
   Result<std::shared_ptr<Table>> ToTable() override;
 
@@ -518,8 +508,8 @@ Result<TaggedRecordBatchIterator> AsyncScanner::ScanBatches() {
   return MakeGeneratorIterator(std::move(batches_gen));
 }
 
-Result<TaggedRecordBatchIterator> AsyncScanner::ScanBatchesWithWeakFilter() {
-  return Status::NotImplemented("Scanning with weak filter not implemented in async scanner");
+Result<TaggedRecordBatchIterator> AsyncScanner::ScanBatchesWithWeakFilterProject() {
+  return Status::NotImplemented("Scanning with weak filter project not implemented in async scanner");
 }
 
 Result<EnumeratedRecordBatchIterator> AsyncScanner::ScanBatchesUnordered() {

@@ -25,8 +25,10 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.arrow.dataset.scanner.ScanOptions;
 import org.apache.arrow.dataset.scanner.ScanTask;
 import org.apache.arrow.dataset.scanner.Scanner;
+import org.apache.arrow.util.Preconditions;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.SchemaUtility;
@@ -40,6 +42,7 @@ public class NativeScanner implements Scanner {
 
   private final AtomicBoolean executed = new AtomicBoolean(false);
   private final NativeContext context;
+  private final ScanOptions options;
   private final long scannerId;
 
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -47,8 +50,9 @@ public class NativeScanner implements Scanner {
   private final Lock readLock = lock.readLock();
   private boolean closed = false;
 
-  public NativeScanner(NativeContext context, long scannerId) {
+  public NativeScanner(NativeContext context, ScanOptions options, long scannerId) {
     this.context = context;
+    this.options = options;
     this.scannerId = scannerId;
   }
 
@@ -87,6 +91,9 @@ public class NativeScanner implements Scanner {
           return false;
         }
         peek = UnsafeRecordBatchSerializer.deserializeUnsafe(context.getAllocator(), bytes);
+        if (options.getColumns() != null) {
+          Preconditions.checkState(peek.getNodes().size() == options.getColumns().length);
+        }
         return true;
       }
 
