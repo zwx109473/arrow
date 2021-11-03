@@ -277,7 +277,7 @@ class ARROW_DS_EXPORT Scanner {
   ///
   /// Filter and Project expressions in ScanOption will be not executed individually and
   /// will be only recognized by the underlying file format.
-  virtual Result<RecordBatchIterator> ScanBatchesWithWeakFilterProject() = 0;
+  virtual Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilterProject() = 0;
   /// \brief Scan the dataset into a stream of record batches.  Unlike ScanBatches this
   /// method may allow record batches to be returned out of order.  This allows for more
   /// efficient scanning: some fragments may be accessed more quickly than others (e.g.
