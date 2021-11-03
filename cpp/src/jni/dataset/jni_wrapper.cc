@@ -125,7 +125,7 @@ class ReserveFromJava : public arrow::jniutil::ReservationListener {
 class DisposableScannerAdaptor {
  public:
   DisposableScannerAdaptor(std::shared_ptr<arrow::dataset::Scanner> scanner,
-                           arrow::dataset::TaggedRecordBatchIterator batch_itr)
+                           arrow::RecordBatchIterator batch_itr)
       : scanner_(std::move(scanner)), batch_itr_(std::move(batch_itr)) {}
 
   static arrow::Result<std::shared_ptr<DisposableScannerAdaptor>> Create(
@@ -136,18 +136,18 @@ class DisposableScannerAdaptor {
 
   arrow::Result<std::shared_ptr<arrow::RecordBatch>> Next() {
     ARROW_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> batch, NextBatch());
-    return batch;
+    return std::move(batch);
   }
 
   const std::shared_ptr<arrow::dataset::Scanner>& GetScanner() const { return scanner_; }
 
  private:
   std::shared_ptr<arrow::dataset::Scanner> scanner_;
-  arrow::dataset::TaggedRecordBatchIterator batch_itr_;
+  arrow::RecordBatchIterator batch_itr_;
 
   arrow::Result<std::shared_ptr<arrow::RecordBatch>> NextBatch() {
     ARROW_ASSIGN_OR_RAISE(auto batch, batch_itr_.Next())
-    return batch.record_batch;
+    return batch;
   }
 };
 

@@ -22,6 +22,7 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <iostream>
 
 #include "arrow/array/array_primitive.h"
 #include "arrow/compute/api_scalar.h"
@@ -267,7 +268,7 @@ class ARROW_DS_EXPORT SyncScanner : public Scanner {
       : Scanner(std::move(scan_options)), fragment_(std::move(fragment)) {}
 
   Result<TaggedRecordBatchIterator> ScanBatches() override;
-  Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilterProject() override;
+  Result<RecordBatchIterator> ScanBatchesWithWeakFilterProject() override;
   Result<ScanTaskIterator> Scan() override;
   Status Scan(std::function<Status(TaggedRecordBatch)> visitor) override;
   Result<std::shared_ptr<Table>> ToTable() override;
@@ -298,28 +299,23 @@ Result<TaggedRecordBatchIterator> SyncScanner::ScanBatches() {
   });
 }
 
-Result<TaggedRecordBatchIterator> SyncScanner::ScanBatchesWithWeakFilterProject() {
+Result<RecordBatchIterator> SyncScanner::ScanBatchesWithWeakFilterProject() {
   ARROW_ASSIGN_OR_RAISE(auto fragment_it, GetFragments())
   auto fn = [this](const std::shared_ptr<Fragment>& fragment) -> Result<ScanTaskIterator> {
     ARROW_ASSIGN_OR_RAISE(auto scan_task_it, fragment->Scan(scan_options_));
     return std::move(scan_task_it);
   };
-
   // Iterator<Iterator<ScanTask>>
   auto maybe_scantask_it = MakeMaybeMapIterator(fn, std::move(fragment_it));
   auto scan_task_it = MakeFlattenIterator(std::move(maybe_scantask_it));
+  
+  auto scan_fn = [](const std::shared_ptr<ScanTask>& aTask)->Result<RecordBatchIterator> {
+    ARROW_ASSIGN_OR_RAISE(auto recordbatch_it, aTask->Execute());
+    return std::move(recordbatch_it);    
+  };
 
-  auto task_group = scan_options_->TaskGroup();
-  auto state = std::make_shared<ScanBatchesState>(std::move(scan_task_it), task_group);
-  for (int i = 0; i < scan_options_->fragment_readahead; i++) {
-    state->PushScanTask();
-  }
-  return MakeFunctionIterator([task_group, state]() -> Result<TaggedRecordBatch> {
-    ARROW_ASSIGN_OR_RAISE(auto batch, state->Pop());
-    if (!IsIterationEnd(batch)) return batch;
-    RETURN_NOT_OK(task_group->Finish());
-    return IterationEnd<TaggedRecordBatch>();
-  });
+  auto maybe_recordbatch_it = MakeMaybeMapIterator(scan_fn, std::move(scan_task_it));
+  return MakeFlattenIterator(std::move(maybe_recordbatch_it));
 }
 
 Result<FragmentIterator> SyncScanner::GetFragments() {
@@ -385,7 +381,7 @@ class ARROW_DS_EXPORT AsyncScanner : public Scanner,
 
   Status Scan(std::function<Status(TaggedRecordBatch)> visitor) override;
   Result<TaggedRecordBatchIterator> ScanBatches() override;
-  Result<TaggedRecordBatchIterator> ScanBatchesWithWeakFilterProject() override;
+  Result<RecordBatchIterator> ScanBatchesWithWeakFilterProject() override;
   Result<EnumeratedRecordBatchIterator> ScanBatchesUnordered() override;
   Result<std::shared_ptr<Table>> ToTable() override;
 
@@ -508,7 +504,7 @@ Result<TaggedRecordBatchIterator> AsyncScanner::ScanBatches() {
   return MakeGeneratorIterator(std::move(batches_gen));
 }
 
-Result<TaggedRecordBatchIterator> AsyncScanner::ScanBatchesWithWeakFilterProject() {
+Result<RecordBatchIterator> AsyncScanner::ScanBatchesWithWeakFilterProject() {
   return Status::NotImplemented("Scanning with weak filter project not implemented in async scanner");
 }
 
