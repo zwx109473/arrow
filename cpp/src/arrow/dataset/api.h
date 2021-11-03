@@ -25,6 +25,5 @@
 #include "arrow/dataset/file_base.h"
 #include "arrow/dataset/file_csv.h"
 #include "arrow/dataset/file_ipc.h"
-#include "arrow/dataset/file_orc.h"
 #include "arrow/dataset/file_parquet.h"
 #include "arrow/dataset/scanner.h"
