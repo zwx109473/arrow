@@ -272,6 +272,10 @@ cdef extern from "arrow/dataset/api.h" namespace "arrow::dataset" nogil:
             CFileFormat):
         pass
 
+    cdef cppclass COrcFileFormat "arrow::dataset::OrcFileFormat"(
+            CFileFormat):
+        pass
+
     cdef cppclass CCsvFileFormat "arrow::dataset::CsvFileFormat"(
             CFileFormat):
         CCSVParseOptions parse_options

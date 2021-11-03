@@ -180,6 +180,10 @@ class ARROW_DS_EXPORT FileFormat : public std::enable_shared_from_this<FileForma
       const std::shared_ptr<ScanOptions>& options,
       const std::shared_ptr<FileFragment>& file);
 
+  virtual Future<util::optional<int64_t>> CountRows(
+      const std::shared_ptr<FileFragment>& file, Expression predicate,
+      const std::shared_ptr<ScanOptions>& options);
+
   /// \brief Open a fragment
   virtual Result<std::shared_ptr<FileFragment>> MakeFragment(
       FileSource source, Expression partition_expression,

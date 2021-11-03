@@ -48,10 +48,23 @@ class ARROW_EXPORT ORCFileReader {
   static Status Open(const std::shared_ptr<io::RandomAccessFile>& file, MemoryPool* pool,
                      std::unique_ptr<ORCFileReader>* reader);
 
+  /// \brief Creates a new ORC reader
+  ///
+  /// \param[in] file the data source
+  /// \param[in] pool a MemoryPool to use for buffer allocations
+  /// \return the returned reader object
+  static Result<std::unique_ptr<ORCFileReader>> Open(
+      const std::shared_ptr<io::RandomAccessFile>& file, MemoryPool* pool);
+
   /// \brief Return the schema read from the ORC file
   ///
   /// \param[out] out the returned Schema object
   Status ReadSchema(std::shared_ptr<Schema>* out);
+
+  /// \brief Return the schema read from the ORC file
+  ///
+  /// \return the returned Schema object
+  Result<std::shared_ptr<Schema>> ReadSchema();
 
   /// \brief Read the file as a Table
   ///
@@ -80,6 +93,14 @@ class ARROW_EXPORT ORCFileReader {
   ///
   /// The table will be composed of one record batch per stripe.
   ///
+  /// \param[in] include_names the selected field names to read
+  /// \return the returned Table
+  Result<std::shared_ptr<Table>> Read(const std::vector<std::string>& include_names);
+
+  /// \brief Read the file as a Table
+  ///
+  /// The table will be composed of one record batch per stripe.
+  ///
   /// \param[in] schema the Table schema
   /// \param[in] include_indices the selected field indices to read
   /// \param[out] out the returned Table
@@ -95,10 +116,24 @@ class ARROW_EXPORT ORCFileReader {
   /// \brief Read a single stripe as a RecordBatch
   ///
   /// \param[in] stripe the stripe index
+  /// \return the returned RecordBatch
+  Result<std::shared_ptr<RecordBatch>> ReadStripe(int64_t stripe);
+
+  /// \brief Read a single stripe as a RecordBatch
+  ///
+  /// \param[in] stripe the stripe index
   /// \param[in] include_indices the selected field indices to read
   /// \param[out] out the returned RecordBatch
   Status ReadStripe(int64_t stripe, const std::vector<int>& include_indices,
                     std::shared_ptr<RecordBatch>* out);
+
+  /// \brief Read a single stripe as a RecordBatch
+  ///
+  /// \param[in] stripe the stripe index
+  /// \param[in] include_names the selected field names to read
+  /// \return the returned RecordBatch
+  Result<std::shared_ptr<RecordBatch>> ReadStripe(
+      int64_t stripe, const std::vector<std::string>& include_names);
 
   /// \brief Seek to designated row. Invoke NextStripeReader() after seek
   ///        will return stripe reader starting from designated row.

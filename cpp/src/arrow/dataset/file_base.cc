@@ -84,6 +84,13 @@ Result<std::shared_ptr<io::InputStream>> FileSource::OpenCompressed(
   return io::CompressedInputStream::Make(codec.get(), std::move(file));
 }
 
+Future<util::optional<int64_t>> FileFormat::CountRows(
+   const std::shared_ptr<FileFragment>& file, Expression predicate,
+   const std::shared_ptr<ScanOptions>& options) {
+ // Just adapt to ORC interface
+ return Future<util::optional<int64_t>>::MakeFinished(util::nullopt);
+}
+
 Result<std::shared_ptr<FileFragment>> FileFormat::MakeFragment(
     FileSource source, std::shared_ptr<Schema> physical_schema) {
   return MakeFragment(std::move(source), literal(true), std::move(physical_schema));

@@ -612,6 +612,17 @@ std::vector<FieldRef> FieldsInExpression(const Expression& expr) {
   return fields;
 }
 
+bool ExpressionHasFieldRefs(const Expression& expr) {
+  if (expr.literal()) return false;
+
+  if (expr.field_ref()) return true;
+
+  for (const Expression& arg : CallNotNull(expr)->arguments) {
+    if (ExpressionHasFieldRefs(arg)) return true;
+  }
+  return false;
+}
+
 Result<Expression> FoldConstants(Expression expr) {
   return Modify(
       std::move(expr), [](Expression expr) { return expr; },

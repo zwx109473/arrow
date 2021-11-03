@@ -159,6 +159,10 @@ Expression call(std::string function, std::vector<Expression> arguments,
 ARROW_DS_EXPORT
 std::vector<FieldRef> FieldsInExpression(const Expression&);
 
+/// Check if the expression references any fields.
+ARROW_EXPORT
+bool ExpressionHasFieldRefs(const Expression&);
+
 /// Assemble a mapping from field references to known values.
 ARROW_DS_EXPORT
 Result<std::unordered_map<FieldRef, Datum, FieldRef::Hash>> ExtractKnownFieldValues(
