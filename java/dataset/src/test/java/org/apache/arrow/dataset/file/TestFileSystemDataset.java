@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import com.google.common.collect.ImmutableMap;
 import org.apache.arrow.dataset.ParquetWriteSupport;
 import org.apache.arrow.dataset.file.format.CsvFileFormat;
+import org.apache.arrow.dataset.file.format.OrcFileFormat;
 import org.apache.arrow.dataset.file.format.ParquetFileFormat;
 import org.apache.arrow.dataset.filter.Filter;
 import org.apache.arrow.dataset.jni.NativeDataset;
@@ -89,6 +90,42 @@ public class TestFileSystemDataset extends TestNativeDataset {
 
     AutoCloseables.close(datum);
     AutoCloseables.close(factory);
+  }
+
+  @Test
+  public void testOrcRead() throws Exception {
+    RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+    FileSystemDatasetFactory factory = new FileSystemDatasetFactory(allocator,
+            NativeMemoryPool.getDefault(), OrcFileFormat.createDefault(), "file://" + resourcePath("data/people.orc"));
+    ScanOptions options = new ScanOptions(new String[] {"name", "age", "job"}, Filter.EMPTY, 100);
+    Schema schema = factory.inspect();
+    NativeDataset dataset = factory.finish(schema);
+    NativeScanner nativeScanner = dataset.newScan(options);
+    List<? extends ScanTask> scanTasks = collect(nativeScanner.scan());
+    Assert.assertEquals(1, scanTasks.size());
+    ScanTask scanTask = scanTasks.get(0);
+    ScanTask.BatchIterator itr = scanTask.execute();
+
+    VectorSchemaRoot vsr = VectorSchemaRoot.create(schema, allocator);
+    VectorLoader loader = new VectorLoader(vsr);
+    int rowCount = 0;
+    while (itr.hasNext()) {
+      try (ArrowRecordBatch next = itr.next()) {
+        loader.load(next);
+      }
+      rowCount += vsr.getRowCount();
+
+      // check if projector is applied
+      Assert.assertEquals("Schema<name: Utf8, age: Int(32, true), job: Utf8>(metadata: {org.apache.spark.version=3.1.1})",
+              vsr.getSchema().toString());
+    }
+    System.out.println("vsr.getSchema().toString():" + vsr.getSchema().toString());
+    Assert.assertEquals(2, rowCount);
+    assertEquals(3, schema.getFields().size());
+    assertEquals("name", schema.getFields().get(0).getName());
+    assertEquals("age", schema.getFields().get(1).getName());
+    assertEquals("job", schema.getFields().get(2).getName());
+    AutoCloseables.close(vsr, allocator);
   }
 
   @Test

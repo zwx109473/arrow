@@ -774,6 +774,22 @@ JNIEXPORT jlong JNICALL Java_org_apache_arrow_dataset_file_JniWrapper_createParq
 
 /*
  * Class:     org_apache_arrow_dataset_file_JniWrapper
+ * Method:    createOrcFileFormat
+ * Signature: ([Ljava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL Java_org_apache_arrow_dataset_file_JniWrapper_createOrcFileFormat
+    (JNIEnv* env, jobject, jobjectArray dict_columns) {
+  JNI_METHOD_START
+  auto format = std::make_shared<arrow::dataset::OrcFileFormat>();
+  auto dict_column_vector = ToStringVector(env, dict_columns);
+  // format->reader_options.dict_columns = std::unordered_set<std::string>(
+  //     dict_column_vector.begin(), dict_column_vector.end());
+  return arrow::jniutil::CreateNativeRef(format);
+  JNI_METHOD_END(-1L)
+}
+
+/*
+ * Class:     org_apache_arrow_dataset_file_JniWrapper
  * Method:    createCsvFileFormat
  * Signature: (C)J
  */

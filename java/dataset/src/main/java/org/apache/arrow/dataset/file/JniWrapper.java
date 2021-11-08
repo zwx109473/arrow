@@ -85,6 +85,7 @@ public class JniWrapper {
 
   // todo javadoc
   public native long createParquetFileFormat(String[] dictColumns);
+  public native long createOrcFileFormat(String[] dictColumns);
   public native long createCsvFileFormat(char delimiter);
   public native void releaseFileFormatInstance(long nativeInstanceId);
 }
