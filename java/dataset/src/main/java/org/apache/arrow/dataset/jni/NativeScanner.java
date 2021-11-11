@@ -18,23 +18,17 @@
 package org.apache.arrow.dataset.jni;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
 
+import org.apache.arrow.dataset.scanner.ScanOptions;
 import org.apache.arrow.dataset.scanner.ScanTask;
 import org.apache.arrow.dataset.scanner.Scanner;
-import org.apache.arrow.memory.ArrowBuf;
-import org.apache.arrow.memory.BufferAllocator;
-import org.apache.arrow.memory.BufferLedger;
-import org.apache.arrow.memory.NativeUnderlyingMemory;
-import org.apache.arrow.memory.util.LargeMemoryUtil;
-import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
+import org.apache.arrow.util.Preconditions;
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.SchemaUtility;
@@ -48,15 +42,19 @@ public class NativeScanner implements Scanner {
 
   private final AtomicBoolean executed = new AtomicBoolean(false);
   private final NativeContext context;
+  private final ScanOptions options;
   private final long scannerId;
 
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
   private final Lock writeLock = lock.writeLock();
   private final Lock readLock = lock.readLock();
+
+  private Schema schema = null;
   private boolean closed = false;
 
-  public NativeScanner(NativeContext context, long scannerId) {
+  public NativeScanner(NativeContext context, ScanOptions options, long scannerId) {
     this.context = context;
+    this.options = options;
     this.scannerId = scannerId;
   }
 
@@ -95,6 +93,9 @@ public class NativeScanner implements Scanner {
           return false;
         }
         peek = UnsafeRecordBatchSerializer.deserializeUnsafe(context.getAllocator(), bytes);
+        if (options.getColumns().isPresent()) {
+          Preconditions.checkState(schema().getFields().size() == options.getColumns().get().length);
+        }
         return true;
       }
 
@@ -123,12 +124,19 @@ public class NativeScanner implements Scanner {
 
   @Override
   public Schema schema() {
+    if (schema != null) {
+      return schema;
+    }
     readLock.lock();
     try {
+      if (schema != null) {
+        return schema;
+      }
       if (closed) {
         throw new NativeInstanceReleasedException();
       }
-      return SchemaUtility.deserialize(JniWrapper.get().getSchemaFromScanner(scannerId), context.getAllocator());
+      schema = SchemaUtility.deserialize(JniWrapper.get().getSchemaFromScanner(scannerId), context.getAllocator());
+      return schema;
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
