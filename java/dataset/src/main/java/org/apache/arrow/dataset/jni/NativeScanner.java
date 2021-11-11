@@ -48,6 +48,8 @@ public class NativeScanner implements Scanner {
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
   private final Lock writeLock = lock.writeLock();
   private final Lock readLock = lock.readLock();
+
+  private Schema schema = null;
   private boolean closed = false;
 
   public NativeScanner(NativeContext context, ScanOptions options, long scannerId) {
@@ -92,7 +94,7 @@ public class NativeScanner implements Scanner {
         }
         peek = UnsafeRecordBatchSerializer.deserializeUnsafe(context.getAllocator(), bytes);
         if (options.getColumns() != null) {
-          Preconditions.checkState(peek.getNodes().size() == options.getColumns().length);
+          Preconditions.checkState(schema().getFields().size() == options.getColumns().length);
         }
         return true;
       }
@@ -122,12 +124,19 @@ public class NativeScanner implements Scanner {
 
   @Override
   public Schema schema() {
+    if (schema != null) {
+      return schema;
+    }
     readLock.lock();
     try {
+      if (schema != null) {
+        return schema;
+      }
       if (closed) {
         throw new NativeInstanceReleasedException();
       }
-      return SchemaUtility.deserialize(JniWrapper.get().getSchemaFromScanner(scannerId), context.getAllocator());
+      schema = SchemaUtility.deserialize(JniWrapper.get().getSchemaFromScanner(scannerId), context.getAllocator());
+      return schema;
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
