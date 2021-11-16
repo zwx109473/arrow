@@ -623,7 +623,7 @@ if(DEFINED ENV{FASTPFOR_SOURCE_URL})
 else()
   set_urls(
     FASTPFOR_SOURCE_URL
-    "https://github.com/lemire/FastPFor/archive/${ARROW_FASTPFOR_BUILD_VERSION}.tar.gz"
+    "https://github.com/zhouyuan/FastPFor/archive/${ARROW_FASTPFOR_BUILD_VERSION}.tar.gz"
     )
 endif()
 
