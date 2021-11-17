@@ -23,7 +23,7 @@ public final class CompressionType {
   public static final byte LZ4_FRAME = 0;
   public static final byte ZSTD = 1;
 
-  public static final String[] names = { "LZ4_FRAME", "ZSTD", };
+  public static final String[] names = { "LZ4_FRAME", "ZSTD", "FASTPFOR", };
 
   public static String name(int e) { return names[e]; }
 }
