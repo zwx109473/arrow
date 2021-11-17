@@ -308,6 +308,40 @@ CAST_NUMERIC_FROM_STRING(double, arrow::DoubleType, FLOAT8)
 
 #undef CAST_NUMERIC_FROM_STRING
 
+#define CAST_NUMERIC_OR_NULL_FROM_STRING(OUT_TYPE, ARROW_TYPE, TYPE_NAME)            \
+  GANDIVA_EXPORT                                                                     \
+  OUT_TYPE gdv_fn_cast##TYPE_NAME##_or_null_utf8(int64_t context, const char* data,  \
+                                    int32_t len, bool in_valid, bool* out_valid) {   \
+    OUT_TYPE val = 0;                                                                \
+    *out_valid = true;                                                               \
+    if (!in_valid) {                                                                 \
+      *out_valid = false;                                                            \
+      return val;                                                                    \
+    }                                                                                \
+    /* trim leading and trailing spaces */                                           \
+    int32_t trimmed_len;                                                             \
+    int32_t start = 0, end = len - 1;                                                \
+    while (start <= end && data[start] == ' ') {                                     \
+      ++start;                                                                       \
+    }                                                                                \
+    while (end >= start && data[end] == ' ') {                                       \
+      --end;                                                                         \
+    }                                                                                \
+    trimmed_len = end - start + 1;                                                   \
+    const char* trimmed_data = data + start;                                         \
+    if (!arrow::internal::ParseValue<ARROW_TYPE>(trimmed_data, trimmed_len, &val)) { \
+      *out_valid = false;                                                            \
+    }                                                                                \
+    return val;                                                                      \
+  }
+
+CAST_NUMERIC_OR_NULL_FROM_STRING(int32_t, arrow::Int32Type, INT)
+CAST_NUMERIC_OR_NULL_FROM_STRING(int64_t, arrow::Int64Type, BIGINT)
+CAST_NUMERIC_OR_NULL_FROM_STRING(float, arrow::FloatType, FLOAT4)
+CAST_NUMERIC_OR_NULL_FROM_STRING(double, arrow::DoubleType, FLOAT8)
+
+#undef CAST_NUMERIC_OR_NULL_FROM_STRING
+
 #define GDV_FN_CAST_VARCHAR_INTEGER(IN_TYPE, ARROW_TYPE)                                 \
   GANDIVA_EXPORT                                                                         \
   const char* gdv_fn_castVARCHAR_##IN_TYPE##_int64(int64_t context, gdv_##IN_TYPE value, \
@@ -536,10 +570,28 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
 
   args = {types->i64_type(),     // int64_t context_ptr
           types->i8_ptr_type(),  // const char* data
+          types->i32_type(),    // int32_t lenr
+          types->i1_type(),    // bool in2_validity
+          types->ptr_type(types->i8_type())};  // bool* out_valid
+
+  engine->AddGlobalMappingForFunc("gdv_fn_castINT_or_null_utf8", types->i32_type(), args,
+                                  reinterpret_cast<void*>(gdv_fn_castINT_or_null_utf8));
+
+  args = {types->i64_type(),     // int64_t context_ptr
+          types->i8_ptr_type(),  // const char* data
           types->i32_type()};    // int32_t lenr
 
   engine->AddGlobalMappingForFunc("gdv_fn_castBIGINT_utf8", types->i64_type(), args,
                                   reinterpret_cast<void*>(gdv_fn_castBIGINT_utf8));
+  
+  args = {types->i64_type(),     // int64_t context_ptr
+          types->i8_ptr_type(),  // const char* data
+          types->i32_type(),    // int32_t lenr
+          types->i1_type(),    // bool in2_validity
+          types->ptr_type(types->i8_type())};  // bool* out_valid
+
+  engine->AddGlobalMappingForFunc("gdv_fn_castBIGINT_or_null_utf8", types->i64_type(), args,
+                                  reinterpret_cast<void*>(gdv_fn_castBIGINT_or_null_utf8));
 
   args = {types->i64_type(),     // int64_t context_ptr
           types->i8_ptr_type(),  // const char* data
@@ -550,10 +602,28 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
 
   args = {types->i64_type(),     // int64_t context_ptr
           types->i8_ptr_type(),  // const char* data
+          types->i32_type(),    // int32_t lenr
+          types->i1_type(),    // bool in2_validity
+          types->ptr_type(types->i8_type())};  // bool* out_valid
+
+  engine->AddGlobalMappingForFunc("gdv_fn_castFLOAT4_or_null_utf8", types->float_type(), args,
+                                  reinterpret_cast<void*>(gdv_fn_castFLOAT4_or_null_utf8));
+
+  args = {types->i64_type(),     // int64_t context_ptr
+          types->i8_ptr_type(),  // const char* data
           types->i32_type()};    // int32_t lenr
 
   engine->AddGlobalMappingForFunc("gdv_fn_castFLOAT8_utf8", types->double_type(), args,
                                   reinterpret_cast<void*>(gdv_fn_castFLOAT8_utf8));
+  
+  args = {types->i64_type(),     // int64_t context_ptr
+          types->i8_ptr_type(),  // const char* data
+          types->i32_type(),    // int32_t lenr
+          types->i1_type(),    // bool in2_validity
+          types->ptr_type(types->i8_type())};  // bool* out_valid
+
+  engine->AddGlobalMappingForFunc("gdv_fn_castFLOAT8_or_null_utf8", types->double_type(), args,
+                                  reinterpret_cast<void*>(gdv_fn_castFLOAT8_or_null_utf8));
 
   // gdv_fn_castVARCHAR_int32_int64
   args = {types->i64_type(),       // int64_t execution_context
