@@ -132,13 +132,25 @@ GANDIVA_EXPORT
 int32_t gdv_fn_castINT_utf8(int64_t context, const char* data, int32_t data_len);
 
 GANDIVA_EXPORT
+int32_t gdv_fn_castINT_or_null_utf8(int64_t context, const char* data, int32_t data_len, bool in_valid, bool* out_valid);
+
+GANDIVA_EXPORT
 int64_t gdv_fn_castBIGINT_utf8(int64_t context, const char* data, int32_t data_len);
+
+GANDIVA_EXPORT
+int64_t gdv_fn_castBIGINT_or_null_utf8(int64_t context, const char* data, int32_t data_len, bool in_valid, bool* out_valid);
 
 GANDIVA_EXPORT
 float gdv_fn_castFLOAT4_utf8(int64_t context, const char* data, int32_t data_len);
 
 GANDIVA_EXPORT
+float gdv_fn_castFLOAT4_or_null_utf8(int64_t context, const char* data, int32_t data_len, bool in_valid, bool* out_valid);
+
+GANDIVA_EXPORT
 double gdv_fn_castFLOAT8_utf8(int64_t context, const char* data, int32_t data_len);
+
+GANDIVA_EXPORT
+double gdv_fn_castFLOAT8_or_null_utf8(int64_t context, const char* data, int32_t data_len, bool in_valid, bool* out_valid);
 
 GANDIVA_EXPORT
 const char* gdv_fn_castVARCHAR_int32_int64(int64_t context, int32_t value, int64_t len,
