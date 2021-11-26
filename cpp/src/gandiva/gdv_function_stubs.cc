@@ -37,6 +37,7 @@
 #include "gandiva/formatting_utils.h"
 #include "gandiva/hash_utils.h"
 #include "gandiva/in_holder.h"
+#include "gandiva/json_holder.h"
 #include "gandiva/like_holder.h"
 #include "gandiva/precompiled/types.h"
 #include "gandiva/random_generator_holder.h"
@@ -64,6 +65,12 @@ static char mask_array[256] = {
     'x',      'x',      'x',      'x',       'x',       'x',       'x',       'x',
     'x',      'x',      'x',      'x',       'x',       'x',       'x',       'x',
     'x',      'x',      'x',      (char)123, (char)124, (char)125, (char)126, (char)127};
+
+const uint8_t* gdv_fn_get_json_object_utf8_utf8(int64_t ptr, const char* data, int data_len,
+                           const char* pattern, int pattern_len, int32_t* out_len) {
+  gandiva::JsonHolder* holder = reinterpret_cast<gandiva::JsonHolder*>(ptr);
+  return (*holder)(std::string(data, data_len), std::string(pattern, pattern_len), out_len);
+}
 
 bool gdv_fn_like_utf8_utf8(int64_t ptr, const char* data, int data_len,
                            const char* pattern, int pattern_len) {
@@ -1283,6 +1290,18 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   engine->AddGlobalMappingForFunc("gdv_fn_dec_to_string",
                                   types->i8_ptr_type() /*return_type*/, args,
                                   reinterpret_cast<void*>(gdv_fn_dec_to_string));
+
+  // gdv_fn_get_json_object_utf8_utf8
+  args = {types->i64_type(),     // int64_t ptr
+          types->i8_ptr_type(),  // const char* data
+          types->i32_type(),     // int data_len
+          types->i8_ptr_type(),  // const char* pattern
+          types->i32_type(),     // int pattern_len
+          types->i32_ptr_type()};   // int out_len
+
+  engine->AddGlobalMappingForFunc("gdv_fn_get_json_object_utf8_utf8",
+                                  types->i8_ptr_type() /*return_type*/, args,
+                                  reinterpret_cast<void*>(gdv_fn_get_json_object_utf8_utf8));
 
   // gdv_fn_like_utf8_utf8
   args = {types->i64_type(),     // int64_t ptr

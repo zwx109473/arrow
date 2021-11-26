@@ -260,6 +260,10 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
       NativeFunction("ilike", {}, DataTypeVector{utf8(), utf8()}, boolean(),
                      kResultNullIfNull, "gdv_fn_ilike_utf8_utf8",
                      NativeFunction::kNeedsFunctionHolder),
+                     
+      NativeFunction("get_json_object", {}, DataTypeVector{utf8(), utf8()}, utf8(),
+                     kResultNullIfNull, "gdv_fn_get_json_object_utf8_utf8",
+                     NativeFunction::kNeedsFunctionHolder),
 
       NativeFunction("ltrim", {}, DataTypeVector{utf8(), utf8()}, utf8(),
                      kResultNullIfNull, "ltrim_utf8_utf8", NativeFunction::kNeedsContext),
