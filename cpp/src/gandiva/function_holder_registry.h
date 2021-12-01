@@ -65,7 +65,7 @@ class FunctionHolderRegistry {
     static map_type maker_map = {
         {"like", LAMBDA_MAKER(LikeHolder)},
         {"ilike", LAMBDA_MAKER(LikeHolder)},
-        {"get_json_obejct", LAMBDA_MAKER(JsonHolder)},
+        {"get_json_object", LAMBDA_MAKER(JsonHolder)},
         {"to_date", LAMBDA_MAKER(ToDateHolder)},
         {"random", LAMBDA_MAKER(RandomGeneratorHolder)},
         {"rand", LAMBDA_MAKER(RandomGeneratorHolder)},

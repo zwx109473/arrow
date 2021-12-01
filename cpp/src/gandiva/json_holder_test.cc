@@ -26,7 +26,10 @@
 
 namespace gandiva {
 
-class TestJsonHolder : public ::testing::Test {};
+class TestJsonHolder : public ::testing::Test {
+ protected:
+  ExecutionContext execution_context_;
+};
 
 TEST_F(TestJsonHolder, TestJson) {
   std::shared_ptr<JsonHolder> json_holder;
@@ -34,12 +37,28 @@ TEST_F(TestJsonHolder, TestJson) {
   auto status = JsonHolder::Make(&json_holder);
   EXPECT_EQ(status.ok(), true) << status.message();
 
-  auto& get_json_object = *json_holder;
+  auto get_json_object = *json_holder;
 
   int32_t out_len;
-  const uint8_t* data = get_json_object(R"({"hello": 3.5 })", "$.hello", &out_len);
-  EXPECT_EQ(std::string((char*)data, out_len), "3.5");
 
+  const uint8_t* data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$.hello", &out_len);
+  EXPECT_EQ(std::string((char*)data, out_len), "3.5");
+  
+  // no data contained for given field.
+  data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$.hi", &out_len);
+  EXPECT_EQ(data, nullptr);
+
+  // illegal json string.
+  data = get_json_object(&execution_context_, R"({"hello"-3.5})", "$.hello", &out_len);
+  EXPECT_EQ(data, nullptr);
+  
+  // illegal field is given.
+  data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$xx", &out_len);
+  EXPECT_EQ(data, nullptr);
+
+  // illegal field is given and a short string field.
+  data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$", &out_len);
+  EXPECT_EQ(data, nullptr);
 }
 
 }  // namespace gandiva

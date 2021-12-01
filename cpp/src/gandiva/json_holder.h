@@ -23,6 +23,7 @@
 #include "arrow/json/api.h"
 #include "arrow/json/parser.h"
 #include "arrow/status.h"
+#include "gandiva/execution_context.h"
 #include "gandiva/function_holder.h"
 #include "gandiva/node.h"
 #include "gandiva/visibility.h"
@@ -39,8 +40,8 @@ class GANDIVA_EXPORT JsonHolder : public FunctionHolder {
   static Status Make(std::shared_ptr<JsonHolder>* holder);
 
   //TODO(): should try to return const uint8_t *
-  const uint8_t* operator()(const std::string& json_str, const std::string& json_path, int32_t* out_len);
-
+  const uint8_t* operator()(ExecutionContext* ctx, const std::string& json_str, const std::string& json_path, int32_t* out_len);
+  
   arrow::json::ParseOptions parse_options_ = arrow::json::ParseOptions::Defaults();
   arrow::json::ReadOptions read_options_ = arrow::json::ReadOptions::Defaults();
 };
