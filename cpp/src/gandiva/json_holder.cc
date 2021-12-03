@@ -17,7 +17,6 @@
 
 #include "gandiva/json_holder.h"
 
-#include <iostream>
 #include <regex>
 
 #include "gandiva/node.h"
@@ -42,7 +41,6 @@ const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std:
   (parser->Finish(&parsed));
   auto struct_parsed = std::dynamic_pointer_cast<arrow::StructArray>(parsed);
   //json_path example: $.col_14, will extract col_14 here
-  // needs to gurad failure here
   if (json_path.length() < 3) {
     return nullptr;
   }
@@ -58,9 +56,14 @@ const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std:
     return nullptr;
   }
   auto dict_array = dict_parsed->dictionary();
+  // needs to see whether there is a case that has more than one indices.
+  auto res_index = dict_parsed->GetValueIndex(0);
   auto utf8_array = std::dynamic_pointer_cast<arrow::BinaryArray>(dict_array);
-  auto res = utf8_array->GetValue(0, out_len);
-
+  auto res = utf8_array->GetValue(res_index, out_len);
+  // empty string case.
+  if (*out_len == 0) {
+    return reinterpret_cast<const uint8_t*>("");
+  }
   uint8_t* result_buffer = reinterpret_cast<uint8_t*>(ctx->arena()->Allocate(*out_len));
   memcpy(result_buffer, std::string((char*)res, *out_len).data(), *out_len);
   return result_buffer;

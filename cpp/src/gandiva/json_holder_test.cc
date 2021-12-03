@@ -41,24 +41,42 @@ TEST_F(TestJsonHolder, TestJson) {
 
   int32_t out_len;
 
-  const uint8_t* data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$.hello", &out_len);
+  const uint8_t* data = get_json_object(&execution_context_, R"({"hello": "3.5"})", "$.hello", &out_len);
+  EXPECT_EQ(std::string((char*)data, out_len), "3.5");
+
+  // test the case that value is not surrended by double quotes.
+  data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$.hello", &out_len);
+  EXPECT_EQ(out_len, 3);
   EXPECT_EQ(std::string((char*)data, out_len), "3.5");
   
   // no data contained for given field.
   data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$.hi", &out_len);
   EXPECT_EQ(data, nullptr);
 
+  // empty string.
+  data = get_json_object(&execution_context_, R"({"hello": ""})", "$.hello", &out_len);
+  EXPECT_EQ(out_len, 0);
+  EXPECT_EQ(std::string((char*)data, out_len), "");
+
   // illegal json string.
   data = get_json_object(&execution_context_, R"({"hello"-3.5})", "$.hello", &out_len);
   EXPECT_EQ(data, nullptr);
   
-  // illegal field is given.
-  data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$xx", &out_len);
+  // field name is incorrectly given.
+  data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$hello", &out_len);
   EXPECT_EQ(data, nullptr);
 
-  // illegal field is given and a short string field.
-  data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$", &out_len);
+  // field name is not given.
+  data = get_json_object(&execution_context_, R"({"hello": 3.5})", "$.", &out_len);
   EXPECT_EQ(data, nullptr);
+  
+  data = get_json_object(&execution_context_, R"({"name": "fang", "age": 5, "id": "001"})", "$.age", &out_len);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(std::string((char*)data, out_len), "5");
+
+  data = get_json_object(&execution_context_, R"({"name": "fang", "age": "5", "id": "001"})", "$.id", &out_len);
+  EXPECT_EQ(out_len, 3);
+  EXPECT_EQ(std::string((char*)data, out_len), "001");
 }
 
 }  // namespace gandiva
