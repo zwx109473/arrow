@@ -698,9 +698,17 @@ const char* castVARCHAR_date32_int64(gdv_int64 context, gdv_date32 in_day,
   const int char_buffer_length = kDateStringLen + 1;  // snprintf adds \0
   char char_buffer[char_buffer_length];
 
-  // yyyy-MM-dd hh:mm:ss.sss
-  int res = snprintf(char_buffer, char_buffer_length,
+  int res = -1;
+  if (length == 10) {
+    // yyyy-MM-dd
+    res = snprintf(char_buffer, char_buffer_length,
                      "%04" PRId64 "-%02" PRId64 "-%02" PRId64, year, month, day);
+  } else if (length == 8) {
+    // yyyyMMdd
+    res = snprintf(char_buffer, char_buffer_length,
+                     "%04" PRId64 "%02" PRId64 "%02" PRId64, year, month, day);
+  }
+  
   if (res < 0) {
     gdv_fn_context_set_error_msg(context, "Could not format the date");
     return "";
