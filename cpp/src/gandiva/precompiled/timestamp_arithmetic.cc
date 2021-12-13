@@ -177,6 +177,12 @@ TIMESTAMP_DIFF(timestamp)
     return millis + TO_MILLIS * static_cast<gdv_##TYPE>(count);          \
   }
 
+#define ADD_DATE32_TO_INT32_FIXED_UNITS(TYPE, NAME, TO_DAYS)             \
+  FORCE_INLINE                                                           \
+  gdv_##TYPE NAME##_##TYPE##_int32(gdv_##TYPE days, gdv_int32 count) {   \
+    return days + TO_DAYS * static_cast<gdv_##TYPE>(count);              \
+  }
+
 #define ADD_TIMESTAMP_TO_INT64_FIXED_UNITS(TYPE, NAME, TO_MILLIS)        \
   FORCE_INLINE                                                           \
   gdv_##TYPE NAME##_##TYPE##_int64(gdv_##TYPE millis, gdv_int64 count) { \
@@ -256,6 +262,10 @@ ADD_INT64_TO_TIMESTAMP_FIXED_UNITS(timestamp, add, MILLIS_IN_DAY)
 ADD_TIMESTAMP_TO_INT32_FIXED_UNITS(date64, date_sub, -1 * MILLIS_IN_DAY)
 ADD_TIMESTAMP_TO_INT32_FIXED_UNITS(date64, subtract, -1 * MILLIS_IN_DAY)
 ADD_TIMESTAMP_TO_INT32_FIXED_UNITS(date64, date_diff, -1 * MILLIS_IN_DAY)
+
+// date32 support for date_sub. TODO: add date32 support for substract/date_diff?
+ADD_DATE32_TO_INT32_FIXED_UNITS(date32, date_sub, -1)
+
 ADD_TIMESTAMP_TO_INT32_FIXED_UNITS(timestamp, date_sub, -1 * MILLIS_IN_DAY)
 ADD_TIMESTAMP_TO_INT32_FIXED_UNITS(timestamp, subtract, -1 * MILLIS_IN_DAY)
 ADD_TIMESTAMP_TO_INT32_FIXED_UNITS(timestamp, date_diff, -1 * MILLIS_IN_DAY)

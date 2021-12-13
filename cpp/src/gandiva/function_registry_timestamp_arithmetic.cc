@@ -46,6 +46,7 @@ namespace gandiva {
 
 #define DATE_DIFF_FNS(name, ALIASES)                                                \
   BINARY_GENERIC_SAFE_NULL_IF_NULL(name, ALIASES, date64, int32, date64),           \
+      BINARY_GENERIC_SAFE_NULL_IF_NULL(name, ALIASES, date32, int32, date32),       \
       BINARY_GENERIC_SAFE_NULL_IF_NULL(name, ALIASES, timestamp, int32, timestamp), \
       BINARY_GENERIC_SAFE_NULL_IF_NULL(name, ALIASES, date64, int64, date64),       \
       BINARY_GENERIC_SAFE_NULL_IF_NULL(name, ALIASES, timestamp, int64, timestamp)
