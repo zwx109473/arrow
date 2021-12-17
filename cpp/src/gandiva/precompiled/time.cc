@@ -858,6 +858,23 @@ gdv_timestamp castTIMESTAMP_utf8(int64_t context, const char* input, gdv_int32 l
   return std::chrono::time_point_cast<milliseconds>(date_time).time_since_epoch().count();
 }
 
+gdv_timestamp castTIMESTAMP_with_validation_check_utf8(int64_t context, const char* input,
+                                                       gdv_int32 length, bool in_valid,
+                                                       bool* out_valid) {
+  if (!in_valid) {
+    *out_valid = false;
+    return 0;
+  }
+  // Suppose the input is yyyy-MM-dd.
+  // TODO: check validaition during/after parsing.
+  if (length > 10) {
+    *out_valid = false;
+    return 0;
+  }
+  return castTIMESTAMP_withCarrying_utf8(context, input, length, in_valid, out_valid);
+}
+
+
 /*
  * Input consists of mandatory and optional fields.
  * Mandatory fields are year, month and day.
