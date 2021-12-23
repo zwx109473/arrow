@@ -174,7 +174,7 @@ class ARROW_EXPORT ORCFileReader {
   ///
   /// \param[in] include_indices the selected field names to read
   /// \param[out] out the returned stripe reader
-  Status NextStripeReader(int64_t batch_size, const std::vector<std::string>& include_names,
+  Status NextBatchReader(int64_t batch_size, const std::vector<std::string>& include_names,
                           std::shared_ptr<RecordBatchReader>* out);
 
   /// \brief The number of stripes in the file
