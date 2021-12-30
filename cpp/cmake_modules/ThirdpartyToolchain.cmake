@@ -2178,6 +2178,9 @@ macro(build_re2)
   set(RE2_INCLUDE_DIR "${RE2_PREFIX}/include")
 
   list(APPEND ARROW_BUNDLED_STATIC_LIBS re2::re2)
+
+  # Install re2 headers for gazelle native code use.
+  install(DIRECTORY "${RE2_INCLUDE_DIR}/re2" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 endmacro()
 
 if(ARROW_WITH_RE2)
