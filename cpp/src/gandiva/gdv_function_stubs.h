@@ -72,6 +72,11 @@ bool gdv_fn_ilike_utf8_utf8(int64_t ptr, const char* data, int data_len,
 const uint8_t* gdv_fn_get_json_object_utf8_utf8(int64_t ptr, int64_t holder_ptr, const char* data, int data_len, bool in1_valid,
                            const char* pattern, int pattern_len, bool in2_valid, bool* out_valid, int32_t* out_len);
 
+const uint8_t* gdv_fn_translate_utf8_utf8_utf8(int64_t ptr, int64_t holder_ptr, const char* text, 
+                                               int text_len, const char* matching_str,
+                                               int matching_str_len, const char* replace_str,
+                                               int replace_str_len, int32_t* out_len);
+
 int64_t gdv_fn_to_date_utf8_utf8_int32(int64_t context, int64_t ptr, const char* data,
                                        int data_len, bool in1_validity,
                                        const char* pattern, int pattern_len,
