@@ -17,6 +17,7 @@
 
 // String functions
 #include "arrow/util/value_parsing.h"
+
 extern "C" {
 
 #include <limits.h>
