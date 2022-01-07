@@ -115,6 +115,12 @@ std::vector<NativeFunction> GetArithmeticFunctionRegistry() {
       // normalize for nan and zero
       UNARY_SAFE_NULL_IF_NULL(normalize, {}, float32, float32),
       UNARY_SAFE_NULL_IF_NULL(normalize, {}, float64, float64),
+      // floor
+      UNARY_SAFE_NULL_IF_NULL(floor, {}, float64, int64),
+      UNARY_SAFE_NULL_IF_NULL(floor, {}, int64, int64),
+      // ceil
+      UNARY_SAFE_NULL_IF_NULL(ceil, {}, float64, int64),
+      UNARY_SAFE_NULL_IF_NULL(ceil, {}, int64, int64),
       // bitwise functions
       BINARY_GENERIC_SAFE_NULL_IF_NULL(shift_left, {}, int32, int32, int32),
       BINARY_GENERIC_SAFE_NULL_IF_NULL(shift_left, {}, int64, int32, int64),
