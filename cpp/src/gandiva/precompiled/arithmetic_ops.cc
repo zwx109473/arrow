@@ -242,6 +242,30 @@ NORMALIZE(float32, float32)
 
 #undef NORMALIZE
 
+// floor
+#define FLOOR(IN_TYPE, OUT_TYPE)                                        \
+  FORCE_INLINE                                                          \
+  gdv_##OUT_TYPE floor_##IN_TYPE(gdv_##IN_TYPE in) {                    \
+    return static_cast<gdv_##OUT_TYPE>(std::floor(in));                 \
+  }
+
+FLOOR(float64, int64)
+FLOOR(int64, int64)
+
+#undef FLOOR
+
+// ceil
+#define CEIL(IN_TYPE, OUT_TYPE)                                        \
+  FORCE_INLINE                                                         \
+  gdv_##OUT_TYPE ceil_##IN_TYPE(gdv_##IN_TYPE in) {                    \
+    return static_cast<gdv_##OUT_TYPE>(std::ceil(in));                 \
+  }
+
+CEIL(float64, int64)
+CEIL(int64, int64)
+
+#undef CEIL
+
 // cast fns : takes one param type, returns another type.
 #define CAST_UNARY(NAME, IN_TYPE, OUT_TYPE)           \
   FORCE_INLINE                                        \
