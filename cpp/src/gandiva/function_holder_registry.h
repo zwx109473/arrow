@@ -31,6 +31,7 @@
 #include "gandiva/random_generator_holder.h"
 #include "gandiva/replace_holder.h"
 #include "gandiva/to_date_holder.h"
+#include "gandiva/translate_holder.h"
 
 namespace gandiva {
 
@@ -70,6 +71,7 @@ class FunctionHolderRegistry {
         {"random", LAMBDA_MAKER(RandomGeneratorHolder)},
         {"rand", LAMBDA_MAKER(RandomGeneratorHolder)},
         {"regexp_replace", LAMBDA_MAKER(ReplaceHolder)},
+        {"translate", LAMBDA_MAKER(TranslateHolder)}
     };
     return maker_map;
   }

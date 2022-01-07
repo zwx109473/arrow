@@ -17,6 +17,7 @@
 
 // String functions
 #include "arrow/util/value_parsing.h"
+
 extern "C" {
 
 #include <limits.h>
@@ -1326,9 +1327,9 @@ gdv_int32 locate_utf8_utf8_int32(gdv_int64 context, const char* sub_str,
     gdv_fn_context_set_error_msg(context, "Start position must be greater than 0");
     return 0;
   }
-
-  if (str_len == 0 || sub_str_len == 0) {
-    return 0;
+  // TO align with vanilla spark.
+  if (sub_str_len == 0) {
+    return 1;
   }
 
   gdv_int32 byte_pos = utf8_byte_pos(context, str, str_len, start_pos - 1);

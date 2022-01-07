@@ -84,6 +84,7 @@ set(SRC_FILES
     llvm_types.cc
     like_holder.cc
     json_holder.cc
+    translate_holder.cc
     literal_holder.cc
     projector.cc
     regex_util.cc
@@ -231,6 +232,7 @@ add_gandiva_test(internals-test
                  to_date_holder_test.cc
                  simple_arena_test.cc
                  json_holder_test.cc
+                 translate_holder_test.cc
                  like_holder_test.cc
                  replace_holder_test.cc
                  decimal_type_util_test.cc

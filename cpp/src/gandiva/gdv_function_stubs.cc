@@ -33,6 +33,7 @@
 #include "gandiva/random_generator_holder.h"
 #include "gandiva/replace_holder.h"
 #include "gandiva/to_date_holder.h"
+#include "gandiva/translate_holder.h"
 
 /// Stub functions that can be accessed from LLVM or the pre-compiled library.
 
@@ -54,6 +55,17 @@ const uint8_t* gdv_fn_get_json_object_utf8_utf8(int64_t ptr, int64_t holder_ptr,
     return reinterpret_cast<const uint8_t*>("");
   }
   *out_valid = true;
+  return res;
+}
+
+const uint8_t* gdv_fn_translate_utf8_utf8_utf8(int64_t ptr, int64_t holder_ptr, const char* text, 
+                                               int text_len, const char* matching_str,
+                                               int matching_str_len, const char* replace_str,
+                                               int replace_str_len, int32_t* out_len) {
+  gandiva::ExecutionContext* context = reinterpret_cast<gandiva::ExecutionContext*>(ptr);
+  gandiva::TranslateHolder* holder = reinterpret_cast<gandiva::TranslateHolder*>(holder_ptr);
+  auto res = (*holder)(context, std::string(text, text_len), std::string(matching_str, matching_str_len),
+              std::string(replace_str, replace_str_len), out_len);
   return res;
 }
 
@@ -517,6 +529,20 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   engine->AddGlobalMappingForFunc("gdv_fn_get_json_object_utf8_utf8",
                                   types->i8_ptr_type() /*return_type*/, args,
                                   reinterpret_cast<void*>(gdv_fn_get_json_object_utf8_utf8));
+  
+  // gdv_fn_translate_utf8_utf8_utf8
+  args = {types->i64_type(),      // int64_t ptr
+          types->i64_type(),      // int64_t holder_ptr
+          types->i8_ptr_type(),   // const char* text
+          types->i32_type(),      // int text_len
+          types->i8_ptr_type(),   // const char* matching_str
+          types->i32_type(),      // int matching_str_len
+          types->i8_ptr_type(),   // const char* replace_str
+          types->i32_type(),      // int replace_str_len
+          types->i32_ptr_type()}; // int* out_len
+  engine->AddGlobalMappingForFunc("gdv_fn_translate_utf8_utf8_utf8", 
+                                  types->i8_ptr_type() /*return types*/, args, 
+                                  reinterpret_cast<void*>(gdv_fn_translate_utf8_utf8_utf8));
 
   // gdv_fn_like_utf8_utf8
   args = {types->i64_type(),     // int64_t ptr
