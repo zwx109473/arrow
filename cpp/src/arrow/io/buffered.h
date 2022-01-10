@@ -89,6 +89,61 @@ class ARROW_EXPORT BufferedOutputStream : public OutputStream {
   std::unique_ptr<Impl> impl_;
 };
 
+
+class ARROW_EXPORT UnlockedBufferedOutputStream : public OutputStream {
+ public:
+  ~UnlockedBufferedOutputStream() override;
+
+  /// \brief Create a buffered output stream wrapping the given output stream.
+  /// \param[in] buffer_size the size of the temporary write buffer
+  /// \param[in] pool a MemoryPool to use for allocations
+  /// \param[in] raw another OutputStream
+  /// \return the created BufferedOutputStream
+  static Result<std::shared_ptr<UnlockedBufferedOutputStream>> Create(
+      int64_t buffer_size, MemoryPool* pool, std::shared_ptr<OutputStream> raw);
+
+  /// \brief Resize internal buffer
+  /// \param[in] new_buffer_size the new buffer size
+  /// \return Status
+  Status SetBufferSize(int64_t new_buffer_size);
+
+  /// \brief Return the current size of the internal buffer
+  int64_t buffer_size() const;
+
+  /// \brief Return the number of remaining bytes that have not been flushed to
+  /// the raw OutputStream
+  int64_t bytes_buffered() const;
+
+  /// \brief Flush any buffered writes and release the raw
+  /// OutputStream. Further operations on this object are invalid
+  /// \return the underlying OutputStream
+  Result<std::shared_ptr<OutputStream>> Detach();
+
+  // OutputStream interface
+
+  /// \brief Close the buffered output stream.  This implicitly closes the
+  /// underlying raw output stream.
+  Status Close() override;
+  Status Abort() override;
+  bool closed() const override;
+
+  Result<int64_t> Tell() const override;
+  // Write bytes to the stream. Thread-safe
+  Status Write(const void* data, int64_t nbytes) override;
+  Status Write(const std::shared_ptr<Buffer>& data) override;
+
+  Status Flush() override;
+
+  /// \brief Return the underlying raw output stream.
+  std::shared_ptr<OutputStream> raw() const;
+
+ private:
+  explicit UnlockedBufferedOutputStream(std::shared_ptr<OutputStream> raw, MemoryPool* pool);
+
+  class ARROW_NO_EXPORT Impl;
+  std::unique_ptr<Impl> impl_;
+};
+
 /// \class BufferedInputStream
 /// \brief An InputStream that performs buffered reads from an unbuffered
 /// InputStream, which can mitigate the overhead of many small reads in some
