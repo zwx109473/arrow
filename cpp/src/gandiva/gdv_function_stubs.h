@@ -98,6 +98,12 @@ bool in_expr_lookup_utf8(int64_t ptr, const char* data, int data_len, bool in_va
 int gdv_fn_time_with_zone(int* time_fields, const char* zone, int zone_len,
                           int64_t* ret_time);
 
+double gdv_fn_random(int64_t ptr);
+
+double gdv_fn_random_with_seed(int64_t ptr, int32_t seed, bool seed_validity);
+
+double gdv_fn_random_with_seed64(int64_t ptr, int64_t seed, bool seed_validity);
+
 GANDIVA_EXPORT
 const char* gdv_fn_base64_encode_binary(int64_t context, const char* in, int32_t in_len,
                                         int32_t* out_len);

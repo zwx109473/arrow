@@ -85,6 +85,27 @@ TEST_F(TestRandGenHolder, WithValidSeeds) {
   EXPECT_NE(random_1(), random_2());
 }
 
+TEST_F(TestRandGenHolder, WithValidSeedsInLongType) {
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_1;
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_2;
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_3;
+  FunctionNode rand_func_1 = BuildRandWithSeedFunc(100L, false);
+  FunctionNode rand_func_2 = BuildRandWithSeedFunc(1000L, false);
+  FunctionNode rand_func_3 = BuildRandWithSeedFunc(100000L, false);
+  auto status = RandomGeneratorHolder::Make(rand_func_1, &rand_gen_holder_1);
+  EXPECT_EQ(status.ok(), true) << status.message();
+  status = RandomGeneratorHolder::Make(rand_func_2, &rand_gen_holder_2);
+  EXPECT_EQ(status.ok(), true) << status.message();
+  status = RandomGeneratorHolder::Make(rand_func_3, &rand_gen_holder_3);
+  EXPECT_EQ(status.ok(), true) << status.message();
+
+  auto& random_1 = *rand_gen_holder_1;
+  auto& random_2 = *rand_gen_holder_2;
+  auto& random_3 = *rand_gen_holder_3;
+  EXPECT_NE(random_2(), random_3());
+  EXPECT_NE(random_1(), random_2());
+}
+
 TEST_F(TestRandGenHolder, WithInValidSeed) {
   std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_1;
   std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_2;
