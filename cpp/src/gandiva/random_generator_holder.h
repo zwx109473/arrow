@@ -46,6 +46,11 @@ class GANDIVA_EXPORT RandomGeneratorHolder : public FunctionHolder {
     generator_.seed(static_cast<uint64_t>(seed64));
   }
 
+  explicit RandomGeneratorHolder(int64_t seed64) : distribution_(0, 1) {
+    seed64 = (seed64 ^ 0x00000005DEECE66D) & 0x0000ffffffffffff;
+    generator_.seed(static_cast<uint64_t>(seed64));
+  }
+
   RandomGeneratorHolder() : distribution_(0, 1) {
     generator_.seed(::arrow::internal::GetRandomSeed());
   }
