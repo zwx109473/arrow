@@ -157,6 +157,15 @@ using TemporalArrowTypes =
 
 using DecimalArrowTypes = ::testing::Types<Decimal128Type, Decimal256Type>;
 
+using BinaryArrowTypes =
+    ::testing::Types<BinaryType, LargeBinaryType, StringType, LargeStringType>;
+
+using StringArrowTypes = ::testing::Types<StringType, LargeStringType>;
+
+using ListArrowTypes = ::testing::Types<ListType, LargeListType>;
+
+using UnionArrowTypes = ::testing::Types<SparseUnionType, DenseUnionType>;
+
 class Array;
 class ChunkedArray;
 class RecordBatch;
