@@ -79,6 +79,14 @@ class ExpressionCacheKey {
 
   size_t Hash() const { return hash_code_; }
 
+  std::string ToString() {
+    std::stringstream stringstream;
+    for (const auto &item : expressions_as_strings_) {
+      stringstream << item << " || ";
+    }
+    return stringstream.str();
+  }
+
   bool operator==(const ExpressionCacheKey& other) const {
     if (hash_code_ != other.hash_code_) {
       return false;
