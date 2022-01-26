@@ -89,6 +89,9 @@ double gdv_fn_random_with_seed(int64_t ptr, int32_t seed, bool seed_validity);
 
 double gdv_fn_random_with_seed64(int64_t ptr, int64_t seed, bool seed_validity);
 
+double gdv_fn_random_with_seed64_offset(int64_t ptr, int64_t seed, bool seed_validity, 
+                                        int32_t offset, bool offset_validity);
+
 GANDIVA_EXPORT
 const char* gdv_fn_sha256_decimal128(int64_t context, int64_t x_high, uint64_t x_low,
                                      int32_t x_precision, int32_t x_scale,

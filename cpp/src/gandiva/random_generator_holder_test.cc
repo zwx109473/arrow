@@ -32,6 +32,20 @@ class TestRandGenHolder : public ::testing::Test {
         std::make_shared<LiteralNode>(arrow::int32(), LiteralHolder(seed), seed_is_null);
     return FunctionNode("rand", {seed_node}, arrow::float64());
   }
+
+  FunctionNode BuildRandWithSeedFunc(int64_t seed, bool seed_is_null) {
+    auto seed_node =
+        std::make_shared<LiteralNode>(arrow::int64(), LiteralHolder(seed), seed_is_null);
+    return FunctionNode("rand", {seed_node}, arrow::float64());
+  }
+
+  FunctionNode BuildRandWithSeedFunc(int64_t seed, bool seed_is_null, int32_t offset, 
+                                     bool offset_is_null) {
+    auto seed_node =
+        std::make_shared<LiteralNode>(arrow::int64(), LiteralHolder(seed), seed_is_null);
+    auto offset_node = std::make_shared<LiteralNode>(arrow::int32(), LiteralHolder(offset), offset_is_null);
+    return FunctionNode("rand", {seed_node, offset_node}, arrow::float64());
+  }
 };
 
 TEST_F(TestRandGenHolder, NoSeed) {
@@ -104,6 +118,22 @@ TEST_F(TestRandGenHolder, WithValidSeedsInLongType) {
   auto& random_3 = *rand_gen_holder_3;
   EXPECT_NE(random_2(), random_3());
   EXPECT_NE(random_1(), random_2());
+}
+
+// Test valid seed with offset given.
+TEST_F(TestRandGenHolder, WithValidSeedsAndOffset) {
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_1;
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_2;
+  FunctionNode rand_func_1 = BuildRandWithSeedFunc(1000L, false);
+  FunctionNode rand_func_2 = BuildRandWithSeedFunc(900L, false, 100, false);
+  auto status = RandomGeneratorHolder::Make(rand_func_1, &rand_gen_holder_1);
+  EXPECT_EQ(status.ok(), true) << status.message();
+  status = RandomGeneratorHolder::Make(rand_func_2, &rand_gen_holder_2);
+  EXPECT_EQ(status.ok(), true) << status.message();
+
+  auto& random_1 = *rand_gen_holder_1;
+  auto& random_2 = *rand_gen_holder_2;
+  EXPECT_EQ(random_1(), random_2());
 }
 
 TEST_F(TestRandGenHolder, WithInValidSeed) {
