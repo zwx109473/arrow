@@ -90,6 +90,18 @@ class FastPForCodec : public Codec {
 
   Compression::type compression_type() const override { return Compression::FASTPFOR; }
 
+  int minimum_compression_level() const override {
+    return kUseDefaultCompressionLevel;
+  }
+
+  int maximum_compression_level() const override {
+    return kUseDefaultCompressionLevel;
+  }
+
+  int default_compression_level() const override {
+    return kUseDefaultCompressionLevel;
+  }
+
   Status Init() override {
     // FastPForLib::CODECFactory::getFromName("fastpfor256") is not thread safe.
     fastpfor_codec_ =
