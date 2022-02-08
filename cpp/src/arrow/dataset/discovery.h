@@ -256,12 +256,10 @@ class ARROW_DS_EXPORT FileSystemDatasetFactory : public DatasetFactory {
   Result<std::shared_ptr<Dataset>> Finish(FinishOptions options) override;
 
  protected:
-  FileSystemDatasetFactory(std::vector<fs::FileInfo> files,
+  FileSystemDatasetFactory(std::vector<FileSource> files,
                            std::shared_ptr<fs::FileSystem> filesystem,
                            std::shared_ptr<FileFormat> format,
                            FileSystemFactoryOptions options);
-
-  Result<std::shared_ptr<Schema>> PartitionSchema();
 
   std::vector<FileSource> files_;
   std::shared_ptr<fs::FileSystem> fs_;

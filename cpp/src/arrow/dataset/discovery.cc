@@ -239,16 +239,17 @@ Result<std::vector<std::shared_ptr<Schema>>> FileSystemDatasetFactory::InspectSc
   const bool has_fragments_limit = options.fragments >= 0;
   int fragments = options.fragments;
   std::vector<std::string> paths;
-  for (const auto& info : files_) {
+  for (const auto& src : files_) {
     if (has_fragments_limit && fragments-- == 0) break;
-    auto result = format_->Inspect({info, fs_});
+    auto result = format_->Inspect(src);
     if (ARROW_PREDICT_FALSE(!result.ok())) {
       return result.status().WithMessage(
-          "Error creating dataset. Could not read schema from '", info.path(),
+          "Error creating dataset. Could not read schema from '", src.path(),
           "': ", result.status().message(), ". Is this a '", format_->type_name(),
           "' file?");
     }
-    schemas.push_back(result.MoveValueUnsafe());
+    std::shared_ptr<Schema> schema = result.MoveValueUnsafe();
+    schemas.push_back(schema);
     paths.push_back(src.path());
   }
 
