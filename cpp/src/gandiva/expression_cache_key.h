@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <sstream>
 #include <stddef.h>
 
 #include <thread>
@@ -80,11 +81,11 @@ class ExpressionCacheKey {
   size_t Hash() const { return hash_code_; }
 
   std::string ToString() {
-    std::stringstream stringstream;
+    std::stringstream ss;
     for (const auto &item : expressions_as_strings_) {
-      stringstream << item << " || ";
+      ss << item << " || ";
     }
-    return stringstream.str();
+    return ss.str();
   }
 
   bool operator==(const ExpressionCacheKey& other) const {

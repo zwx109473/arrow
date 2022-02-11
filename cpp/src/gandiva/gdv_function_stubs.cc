@@ -68,12 +68,6 @@ static char mask_array[256] = {
     'x',      'x',      'x',      (char)123, (char)124, (char)125, (char)126, (char)127};
 
 
-const uint8_t* gdv_fn_get_json_object_utf8_utf8(int64_t ptr, const char* data, int data_len,
-                           const char* pattern, int pattern_len, int32_t* out_len) {
-  gandiva::JsonHolder* holder = reinterpret_cast<gandiva::JsonHolder*>(ptr);
-  return (*holder)(std::string(data, data_len), std::string(pattern, pattern_len), out_len);
-}
-
 const uint8_t* gdv_fn_get_json_object_utf8_utf8(int64_t ptr, int64_t holder_ptr, const char* data, int data_len, bool in1_valid,
                            const char* pattern, int pattern_len, bool in2_valid, bool* out_valid, int32_t* out_len) {
   if (!in1_valid || !in2_valid) {

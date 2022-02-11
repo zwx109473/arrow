@@ -35,7 +35,7 @@ const uint8_t* TranslateHolder::operator()(gandiva::ExecutionContext* ctx, std::
                           std::string matching_str, std::string replace_str, int32_t* out_len) {
   char res[text.length()];
   std::unordered_map<char, char> replace_map;
-  for (int i = 0; i < matching_str.length(); i++) {
+  for (uint64_t i = 0; i < matching_str.length(); i++) {
     if (i >= replace_str.length()) {
       replace_map[matching_str[i]] = '\0';
     } else {
@@ -43,7 +43,7 @@ const uint8_t* TranslateHolder::operator()(gandiva::ExecutionContext* ctx, std::
     }
   }
   int j = 0;
-  for (int i = 0; i < text.length(); i++) {
+  for (uint64_t i = 0; i < text.length(); i++) {
     if (replace_map.find(text[i]) == replace_map.end()) {
       res[j++] = text[i];
       continue;

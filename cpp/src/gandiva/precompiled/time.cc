@@ -657,7 +657,6 @@ gdv_date64 castDATE_nullsafe_utf8(int64_t context, const char* input, gdv_int32 
     // store the last value
     dateFields[dateIndex++] = value;
   }
-  const char* msg = "Not a valid date value ";
   if (dateIndex != 3) {
     *out_valid = false;
     return 0;
