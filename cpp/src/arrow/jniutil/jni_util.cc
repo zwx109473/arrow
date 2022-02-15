@@ -299,7 +299,7 @@ Status SetMetadataForSingleField(std::shared_ptr<ArrayData> array_data,
     jlong ref = CreateNativeRef(buffer);
     custom_metadata->Append(
         "NATIVE_BUFFER_REF_" + std::to_string(i),
-        util::base64_encode(arrow::util::string_view(reinterpret_cast<const char*>(ref), sizeof(ref))));
+        util::base64_encode(arrow::util::string_view(reinterpret_cast<const char*>(&ref), sizeof(ref))));
     buffers_meta.push_back(buffer_metadata);
   }
 
