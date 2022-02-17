@@ -41,8 +41,6 @@ Status RandomGeneratorHolder::Make(const FunctionNode& node,
   }
 
   auto literal = dynamic_cast<LiteralNode*>(node.children().at(0).get());
-  //ARROW_RETURN_IF(literal == nullptr,
-  //                Status::Invalid("'random' function requires a literal as parameter"));
   int64_t seed;
   if (literal != nullptr) {
     auto literal_type = literal->return_type()->id();
@@ -55,45 +53,50 @@ Status RandomGeneratorHolder::Make(const FunctionNode& node,
       seed = literal->is_null() ? 0 : arrow::util::get<int64_t>(literal->holder());
     }
   } else {
+    // The below part is to evaluate func node.
     auto first_children_node_ptr = node.children().at(0);
-    //auto schema = arrow::schema({});
-    auto f0 = arrow::field("f0", arrow::float64());
+    auto ret_type = first_children_node_ptr->return_type();
+    // Create a valid schema for useless input.
+    auto f0 = arrow::field("f0", arrow::int32());
     auto schema = arrow::schema({f0});
     std::shared_ptr<Projector> projector;
-    // Not actually used.
-    auto res = field("res", arrow::int32());
+    std::shared_ptr<arrow::Field> res;
+    if (ret_type->id() == arrow::Type::INT32) {
+      res = arrow::field("res", arrow::int32());
+    } else if (ret_type->id() == arrow::Type::INT64) {
+      res = arrow::field("res", arrow::int64());
+    } else {
+      Status::Invalid("Return type needs to be int32/int64 for seed used in 'random' function");
+    }
     auto expr = TreeExprBuilder::MakeExpression(first_children_node_ptr, res);
     auto builder = ConfigurationBuilder();
     auto config = builder.DefaultConfiguration();
     auto status = Projector::Make(schema, {expr}, config, &projector);
     arrow::ArrayVector outputs;
     arrow::MemoryPool* pool = arrow::default_memory_pool();
-    
-    //arrow::ArrayVector inputs;
-    //auto in_batch = arrow::RecordBatch::Make(schema, 0, inputs);
-    
+    // Dummy input.
     std::vector<int> input0 = {16, 10, -14, 8};
     std::vector<bool> validity = {true, true, true, true};
     std::shared_ptr<arrow::Array> array0;
-    //arrow::ArrayFromVector<arrow::DoubleType, double>(validity, values, &array0);
-    //auto array0 = MakeArrowArray<arrow::DoubleType, double>(input0, validity);
-    
-    auto type = arrow::TypeTraits<arrow::Int32Type>::type_singleton();
     std::unique_ptr<arrow::ArrayBuilder> builder_ptr;
-    MakeBuilder(pool, type, &builder_ptr);
+    MakeBuilder(pool, arrow::int32(), &builder_ptr);
     auto& arrow_array_builder = dynamic_cast<typename arrow::TypeTraits<arrow::Int32Type>::BuilderType&>(*builder_ptr);
     for (size_t i = 0; i < input0.size(); ++i) {
       arrow_array_builder.Append(input0[i]);
     }
     arrow_array_builder.Finish(&array0);   
- 
     auto in_batch = arrow::RecordBatch::Make(schema, 4, {array0});
    
-    //arrow::RecordBatch in_batch;
     projector->Evaluate(*in_batch, pool, &outputs);
-    auto result_arr = std::dynamic_pointer_cast<arrow::Int32Array>(outputs.at(0));
-    //seed = dynamic_cast<int32_t>(result_arr->Value(0));
-    seed = result_arr->Value(0);
+    if (ret_type->id() == arrow::Type::INT32) {
+      auto result_arr = std::dynamic_pointer_cast<arrow::Int32Array>(outputs.at(0));
+      seed = result_arr->Value(0);
+    } else if (ret_type->id() == arrow::Type::INT64) {
+      auto result_arr = std::dynamic_pointer_cast<arrow::Int64Array>(outputs.at(0));
+      seed = result_arr->Value(0);
+    } else {
+      Status::Invalid("Return type needs to be int32/int64 for seed used in 'random' function");
+    }
   }
   // The offset is a partition ID in spark SQL. It is used to achieve genuine random distribution globally.
   int32_t offset = 0;

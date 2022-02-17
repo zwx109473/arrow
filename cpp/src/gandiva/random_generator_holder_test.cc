@@ -46,6 +46,35 @@ class TestRandGenHolder : public ::testing::Test {
     auto offset_node = std::make_shared<LiteralNode>(arrow::int32(), LiteralHolder(offset), offset_is_null);
     return FunctionNode("rand", {seed_node, offset_node}, arrow::float64());
   }
+
+  FunctionNode BuildRandWithSeedFunc(int64_t left, bool left_is_null, int64_t right, bool right_is_null, int32_t offset, 
+                                     bool offset_is_null) {
+    auto left_node =
+        std::make_shared<LiteralNode>(arrow::int64(), LiteralHolder(left), left_is_null);
+    auto right_node =
+        std::make_shared<LiteralNode>(arrow::int64(), LiteralHolder(right), right_is_null);
+    auto offset_node = std::make_shared<LiteralNode>(arrow::int32(), LiteralHolder(offset), offset_is_null);
+    NodeVector params;
+    params.push_back(left_node);
+    params.push_back(right_node);
+    auto func_node = std::make_shared<FunctionNode>("add", params, arrow::int64());
+    return FunctionNode("rand", {func_node, offset_node}, arrow::float64());
+  }
+
+  FunctionNode BuildRandWithSeedFunc(int32_t left, bool left_is_null, int32_t right, bool right_is_null, int32_t offset,
+                                     bool offset_is_null) {
+    auto left_node =
+        std::make_shared<LiteralNode>(arrow::int32(), LiteralHolder(left), left_is_null);
+    auto right_node =
+        std::make_shared<LiteralNode>(arrow::int32(), LiteralHolder(right), right_is_null);
+    auto offset_node = std::make_shared<LiteralNode>(arrow::int32(), LiteralHolder(offset), offset_is_null);
+    NodeVector params;
+    params.push_back(left_node);
+    params.push_back(right_node);
+    auto func_node = std::make_shared<FunctionNode>("add", params, arrow::int32());
+    return FunctionNode("rand", {func_node, offset_node}, arrow::float64());
+  }
+
 };
 
 TEST_F(TestRandGenHolder, NoSeed) {
@@ -126,6 +155,38 @@ TEST_F(TestRandGenHolder, WithValidSeedsAndOffset) {
   std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_2;
   FunctionNode rand_func_1 = BuildRandWithSeedFunc(1000L, false);
   FunctionNode rand_func_2 = BuildRandWithSeedFunc(900L, false, 100, false);
+  auto status = RandomGeneratorHolder::Make(rand_func_1, &rand_gen_holder_1);
+  EXPECT_EQ(status.ok(), true) << status.message();
+  status = RandomGeneratorHolder::Make(rand_func_2, &rand_gen_holder_2);
+  EXPECT_EQ(status.ok(), true) << status.message();
+
+  auto& random_1 = *rand_gen_holder_1;
+  auto& random_2 = *rand_gen_holder_2;
+  EXPECT_EQ(random_1(), random_2());
+}
+
+// Test seed is a function node rather than literal node
+TEST_F(TestRandGenHolder, WithFunctionNodeInt32ReturnType) {
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_1;
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_2;
+  FunctionNode rand_func_1 = BuildRandWithSeedFunc(1, false, 1, false, 0, false);
+  FunctionNode rand_func_2 = BuildRandWithSeedFunc(2, false);
+  auto status = RandomGeneratorHolder::Make(rand_func_1, &rand_gen_holder_1);
+  EXPECT_EQ(status.ok(), true) << status.message();
+  status = RandomGeneratorHolder::Make(rand_func_2, &rand_gen_holder_2);
+  EXPECT_EQ(status.ok(), true) << status.message();
+
+  auto& random_1 = *rand_gen_holder_1;
+  auto& random_2 = *rand_gen_holder_2;
+  EXPECT_EQ(random_1(), random_2());
+}
+
+// Test seed is a function node rather than literal node
+TEST_F(TestRandGenHolder, WithFunctionNodeInt64ReturnType) {
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_1;
+  std::shared_ptr<RandomGeneratorHolder> rand_gen_holder_2;
+  FunctionNode rand_func_1 = BuildRandWithSeedFunc(1L, false, 1L, false, 0, false);
+  FunctionNode rand_func_2 = BuildRandWithSeedFunc(2, false);
   auto status = RandomGeneratorHolder::Make(rand_func_1, &rand_gen_holder_1);
   EXPECT_EQ(status.ok(), true) << status.message();
   status = RandomGeneratorHolder::Make(rand_func_2, &rand_gen_holder_2);
