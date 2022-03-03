@@ -84,7 +84,11 @@ class ReserveFromJava : public arrow::jniutil::ReservationListener {
   arrow::Status OnReservation(int64_t size) override {
     JNIEnv* env;
     if (vm_->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION) != JNI_OK) {
-      return arrow::Status::Invalid("JNIEnv was not attached to current thread");
+      if (vm_->AttachCurrentThreadAsDaemon(
+          reinterpret_cast<void**>(&env), nullptr) != JNI_OK) {
+        return arrow::Status::Invalid(
+            "JNIEnv was not able to be attached to current thread");
+      }
     }
     env->CallObjectMethod(java_reservation_listener_, reserve_memory_method, size);
     RETURN_NOT_OK(arrow::jniutil::CheckException(env));
@@ -94,7 +98,11 @@ class ReserveFromJava : public arrow::jniutil::ReservationListener {
   arrow::Status OnRelease(int64_t size) override {
     JNIEnv* env;
     if (vm_->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION) != JNI_OK) {
-      return arrow::Status::Invalid("JNIEnv was not attached to current thread");
+      if (vm_->AttachCurrentThreadAsDaemon(
+          reinterpret_cast<void**>(&env), nullptr) != JNI_OK) {
+        return arrow::Status::Invalid(
+            "JNIEnv was not able to be attached to current thread");
+      }
     }
     env->CallObjectMethod(java_reservation_listener_, unreserve_memory_method, size);
     RETURN_NOT_OK(arrow::jniutil::CheckException(env));
