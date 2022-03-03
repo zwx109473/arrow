@@ -145,7 +145,8 @@ std::vector<NativeFunction> GetDateTimeFunctionRegistry() {
 
       DATE_TYPES(LAST_DAY_SAFE_NULL_IF_NULL, last_day, {}),
       BASE_NUMERIC_TYPES(TO_TIME_SAFE_NULL_IF_NULL, to_time, {}),
-      BASE_NUMERIC_TYPES(TO_TIMESTAMP_SAFE_NULL_IF_NULL, to_timestamp, {})};
+      BASE_NUMERIC_TYPES(TO_TIMESTAMP_SAFE_NULL_IF_NULL, to_timestamp, {}),
+
       NativeFunction("convertTimestampUnit", {}, DataTypeVector{timestamp()}, arrow::timestamp(arrow::TimeUnit::MICRO),
                      kResultNullIfNull, "convertTimestampUnit_ms"),
 
@@ -153,7 +154,7 @@ std::vector<NativeFunction> GetDateTimeFunctionRegistry() {
                      kResultNullIfNull, "convertTimestampUnit_us"),
 
       NativeFunction("castDATE", {}, DataTypeVector{date64()}, date32(),
-                     kResultNullIfNull, "castDATE_date64"),
+                     kResultNullIfNull, "castDATE32_date64"),
 
       NativeFunction("castTIMESTAMP", {}, DataTypeVector{date32()}, timestamp(),
                      kResultNullIfNull, "castTIMESTAMP_date32"),
@@ -197,7 +198,8 @@ std::vector<NativeFunction> GetDateTimeFunctionRegistry() {
       NativeFunction("date_diff", {}, DataTypeVector{date32(), date32()}, int32(),
                      kResultNullIfNull, "micros_to_timestamp_date32_date32"),
 
-      DATE_TYPES(LAST_DAY_SAFE_NULL_IF_NULL, last_day, {});
+      DATE_TYPES(LAST_DAY_SAFE_NULL_IF_NULL, last_day, {})
+  };
 
   return date_time_fn_registry_;
 }
