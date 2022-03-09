@@ -1086,16 +1086,31 @@ class RowGroupGenerator {
       ::arrow::internal::Executor* cpu_executor, std::shared_ptr<FileReaderImpl> self,
       const int row_group, const std::vector<int>& column_indices) {
     // Skips bound checks/pre-buffering, since we've done that already
-    const int64_t batch_size = self->properties().batch_size();
-    return self->DecodeRowGroups(self, {row_group}, column_indices, cpu_executor)
-        .Then([batch_size](const std::shared_ptr<Table>& table)
-                  -> ::arrow::Result<RecordBatchGenerator> {
-          ::arrow::TableBatchReader table_reader(*table);
-          table_reader.set_chunksize(batch_size);
-          ::arrow::RecordBatchVector batches;
-          RETURN_NOT_OK(table_reader.ReadAll(&batches));
-          return ::arrow::MakeVectorGenerator(std::move(batches));
-        });
+
+//    Disable table-based read from Arrow 7.0.0: We don't have a way to decode
+//    const int64_t batch_size = self->properties().batch_size();
+//
+//    view-based Arrow array datum read from table readers from JVM side. Record batch
+//    readers are more friendly for our current cross JNI data sharing facility since
+//    datum read from this type of reader is sliced directly within batch size
+//    specified in reader settings.
+//
+//    return self->DecodeRowGroups(self, {row_group}, column_indices, cpu_executor)
+//        .Then([batch_size](const std::shared_ptr<Table>& table)
+//                  -> ::arrow::Result<RecordBatchGenerator> {
+//          ::arrow::TableBatchReader table_reader(*table);
+//          table_reader.set_chunksize(batch_size);
+//          ::arrow::RecordBatchVector batches;
+//          RETURN_NOT_OK(table_reader.ReadAll(&batches));
+//          return ::arrow::MakeVectorGenerator(std::move(batches));
+//        });
+
+    std::unique_ptr<RecordBatchReader> record_batch_reader;
+    RETURN_NOT_OK(
+        self->GetRecordBatchReader({row_group}, column_indices, &record_batch_reader));
+    ::arrow::RecordBatchVector batches;
+    RETURN_NOT_OK(record_batch_reader->ReadAll(&batches));
+    return ::arrow::MakeVectorGenerator(std::move(batches));
   }
 
   std::shared_ptr<FileReaderImpl> arrow_reader_;
