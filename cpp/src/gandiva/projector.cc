@@ -103,11 +103,11 @@ Status Projector::Make(SchemaPtr schema, const ExpressionVector& exprs,
     output_fields.push_back(expr->result());
   }
 
-  // For statful projection, we should not cache it.
-  if (cache_key.ToString().find(" rand(") == std::string::npos) {
     // Instantiate the projector with the completely built llvm generator
     *projector = std::shared_ptr<Projector>(
         new Projector(std::move(llvm_gen), schema, output_fields, configuration));
+  // For statful projection, we should not cache it.
+  if (cache_key.ToString().find(" rand(") == std::string::npos) {
     projector->get()->SetBuiltFromCache(llvm_flag);
   }
 
