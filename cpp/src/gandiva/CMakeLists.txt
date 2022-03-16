@@ -232,7 +232,7 @@ add_gandiva_test(internals-test
                  expr_decomposer_test.cc
                  expression_registry_test.cc
                  selection_vector_test.cc
-                 lru_cache_test.cc
+                 greedy_dual_size_cache_test.cc
                  to_date_holder_test.cc
                  simple_arena_test.cc
                  json_holder_test.cc
