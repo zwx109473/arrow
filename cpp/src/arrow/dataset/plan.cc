@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <mutex>
+
 #include "arrow/dataset/plan.h"
 
 #include "arrow/compute/exec/exec_plan.h"
@@ -27,10 +29,14 @@ namespace internal {
 
 void Initialize() {
   static auto registry = compute::default_exec_factory_registry();
+  static std::mutex mtx;
   if (registry) {
-    InitializeScanner(registry);
-    InitializeDatasetWriter(registry);
-    registry = nullptr;
+    std::lock_guard<std::mutex> lock(mtx);
+    if (registry) {
+      InitializeScanner(registry);
+      InitializeDatasetWriter(registry);
+      registry = nullptr;
+    }
   }
 }
 
