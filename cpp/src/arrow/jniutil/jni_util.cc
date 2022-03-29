@@ -377,6 +377,17 @@ Result<std::shared_ptr<ArrayData>> MakeArrayData(
                                         child_field->type(), field_offset, buffer_offset))
     children_array_data.push_back(child_array_data);
   }
+
+  if(type->id() == arrow::Type::MAP) {
+    // validate child data for map
+    if (children_array_data[0]->child_data.size() != 2) {
+      return Status::Invalid("Map array child array should have two fields");
+    }
+    // specific handing because of the different schema between spark and native
+    children_array_data[0]->buffers.at(0) = nullptr;
+    children_array_data[0]->null_count = 0;
+  }
+  
   return ArrayData::Make(type, field->length(), buffers, children_array_data,
                          field->null_count());
 }
