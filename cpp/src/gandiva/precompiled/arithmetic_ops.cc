@@ -340,7 +340,7 @@ CAST_UNARY_UTF8(castVARCHAR, float64, utf8, "%.*f", FMT, DBL_DIG)
 #define CAST_INT_FLOAT(NAME, IN_TYPE, OUT_TYPE)                  \
   FORCE_INLINE                                                   \
   gdv_##OUT_TYPE NAME##_##IN_TYPE(gdv_##IN_TYPE in) {            \
-    gdv_##OUT_TYPE out = static_cast<gdv_##OUT_TYPE>(round(in)); \
+    gdv_##OUT_TYPE out = static_cast<gdv_##OUT_TYPE>(in); \
     return out;                                                  \
   }
 
