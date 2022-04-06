@@ -160,6 +160,7 @@ Result<ExtensionSet> ExtensionSet::Make(std::vector<util::string_view> uris,
     if (function_ids[i].empty()) continue;
     RETURN_NOT_OK(set.impl_->CheckHasUri(function_ids[i].uri));
 
+    function_ids[i].name = function_ids[i].name.substr(0, function_ids[i].name.find(':'));
     if (auto rec = registry->GetFunction(function_ids[i])) {
       set.functions_[i] = {rec->id, rec->function_name};
       continue;
@@ -226,7 +227,13 @@ ExtensionIdRegistry* default_extension_id_registry() {
                TypeName{uint16(), "u16"},
                TypeName{uint32(), "u32"},
                TypeName{uint64(), "u64"},
+               TypeName{int8(), "i8"},
+               TypeName{int16(), "i16"},
+               TypeName{int32(), "i32"},
+               TypeName{int64(), "i64"},
                TypeName{float16(), "fp16"},
+               TypeName{float64(), "fp64"},
+               TypeName{date64(), "date"},
            }) {
         DCHECK_OK(RegisterType({kArrowExtTypesUri, e.name}, std::move(e.type),
                                /*is_variation=*/true));
@@ -246,10 +253,19 @@ ExtensionIdRegistry* default_extension_id_registry() {
       // all functions (and prototypes) that Arrow provides that are relevant
       // for Substrait, and include mappings for all of them here. See
       // ARROW-15535.
-      for (util::string_view name : {
-               "add",
-           }) {
-        DCHECK_OK(RegisterFunction({kArrowExtTypesUri, name}, name.to_string()));
+      for (std::pair<util::string_view, std::string> name : {std::make_pair("add", "add"),
+                                                             {"subtract", "subtract"},
+                                                             {"sum", "sum"},
+                                                             {"count", "count"},
+                                                             {"avg", "mean"},
+                                                             {"multiply", "multiply"},
+                                                             {"is_not_null", "is_valid"},
+                                                             {"and", "and"},
+                                                             {"lt", "less"},
+                                                             {"lte", "less_equal"},
+                                                             {"gte", "greater_equal"},
+                                                             {"alias", "alias"}}) {
+        DCHECK_OK(RegisterFunction({kArrowExtTypesUri, name.first}, name.second));
       }
     }
 
