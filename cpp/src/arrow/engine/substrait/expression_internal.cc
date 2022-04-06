@@ -165,6 +165,12 @@ Result<compute::Expression> FromProto(const substrait::Expression& expr,
         ARROW_ASSIGN_OR_RAISE(arguments[i], FromProto(scalar_fn.args(i), ext_set));
       }
 
+      if (decoded_function.name.to_string() == "alias") {
+        if (scalar_fn.args_size() != 1) {
+          return arrow::Status::Invalid("Alias should have exact 1 arg, but got " + std::to_string(scalar_fn.args_size()));
+        }
+        return FromProto(scalar_fn.args().at(0), ext_set);
+      }
       return compute::call(decoded_function.name.to_string(), std::move(arguments));
     }
 
