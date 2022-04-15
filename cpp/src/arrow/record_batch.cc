@@ -390,4 +390,13 @@ Result<std::shared_ptr<RecordBatchReader>> RecordBatchReader::Make(
   return std::make_shared<SimpleRecordBatchReader>(std::move(batches), schema);
 }
 
+Result<std::shared_ptr<RecordBatchReader>> RecordBatchReader::Make(
+    Iterator<std::shared_ptr<RecordBatch>> it, std::shared_ptr<Schema> schema) {
+  if (schema == nullptr) {
+      return Status::Invalid("Cannot infer schema from nullptr");
+  }
+
+  return std::make_shared<SimpleRecordBatchReader>(std::move(it), schema);
+}
+
 }  // namespace arrow
