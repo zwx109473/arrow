@@ -69,6 +69,7 @@ set(ARROW_THIRDPARTY_DEPENDENCIES
     Protobuf
     RapidJSON
     Snappy
+    Substrait
     Thrift
     utf8proc
     xsimd
@@ -174,6 +175,8 @@ macro(build_dependency DEPENDENCY_NAME)
     build_re2()
   elseif("${DEPENDENCY_NAME}" STREQUAL "Snappy")
     build_snappy()
+  elseif("${DEPENDENCY_NAME}" STREQUAL "Substrait")
+    build_substrait()
   elseif("${DEPENDENCY_NAME}" STREQUAL "Thrift")
     build_thrift()
   elseif("${DEPENDENCY_NAME}" STREQUAL "utf8proc")
@@ -311,6 +314,14 @@ endif()
 if(ARROW_ORC
    OR ARROW_FLIGHT
    OR ARROW_GANDIVA)
+  set(ARROW_WITH_PROTOBUF ON)
+endif()
+
+if(ARROW_ENGINE)
+  set(ARROW_WITH_SUBSTRAIT ON)
+endif()
+
+if(ARROW_WITH_SUBSTRAIT)
   set(ARROW_WITH_PROTOBUF ON)
 endif()
 
@@ -608,6 +619,14 @@ else()
              "https://github.com/google/snappy/archive/${ARROW_SNAPPY_BUILD_VERSION}.tar.gz"
              "${THIRDPARTY_MIRROR_URL}/snappy-${ARROW_SNAPPY_BUILD_VERSION}.tar.gz")
   endif()
+endif()
+
+if(DEFINED ENV{ARROW_SUBSTRAIT_URL})
+  set(SUBSTRAIT_SOURCE_URL "$ENV{ARROW_SUBSTRAIT_URL}")
+else()
+  set_urls(SUBSTRAIT_SOURCE_URL
+           "https://github.com/substrait-io/substrait/archive/${ARROW_SUBSTRAIT_BUILD_VERSION}.tar.gz"
+  )
 endif()
 
 if(DEFINED ENV{ARROW_THRIFT_URL})
@@ -1430,13 +1449,18 @@ if(ARROW_WITH_THRIFT)
 endif()
 
 # ----------------------------------------------------------------------
-# Protocol Buffers (required for ORC and Flight and Gandiva libraries)
+# Protocol Buffers (required for ORC, Flight, Gandiva and Substrait libraries)
 
 macro(build_protobuf)
   message("Building Protocol Buffers from source")
   set(PROTOBUF_VENDORED TRUE)
   set(PROTOBUF_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/protobuf_ep-install")
   set(PROTOBUF_INCLUDE_DIR "${PROTOBUF_PREFIX}/include")
+  # This flag is based on what the user initially requested but if
+  # we've fallen back to building protobuf we always build it statically
+  # so we need to reset the flag so that we can link against it correctly
+  # later.
+  set(Protobuf_USE_STATIC_LIBS ON)
   # Newer protobuf releases always have a lib prefix independent from CMAKE_STATIC_LIBRARY_PREFIX
   set(PROTOBUF_STATIC_LIB
       "${PROTOBUF_PREFIX}/lib/libprotobuf${CMAKE_STATIC_LIBRARY_SUFFIX}")
@@ -1534,6 +1558,9 @@ if(ARROW_WITH_PROTOBUF)
     # google::protobuf::MessageLite::ByteSize() is deprecated since
     # Protobuf 3.4.0.
     set(ARROW_PROTOBUF_REQUIRED_VERSION "3.4.0")
+  elseif(ARROW_ENGINE)
+    # Substrait protobuf files use proto3 syntax
+    set(ARROW_PROTOBUF_REQUIRED_VERSION "3.0.0")
   else()
     set(ARROW_PROTOBUF_REQUIRED_VERSION "2.6.1")
   endif()
@@ -1543,7 +1570,7 @@ if(ARROW_WITH_PROTOBUF)
                      PC_PACKAGE_NAMES
                      protobuf)
 
-  if(ARROW_PROTOBUF_USE_SHARED AND MSVC_TOOLCHAIN)
+  if(NOT Protobuf_USE_STATIC_LIBS AND MSVC_TOOLCHAIN)
     add_definitions(-DPROTOBUF_USE_DLLS)
   endif()
 
@@ -1604,6 +1631,87 @@ if(ARROW_WITH_PROTOBUF)
   get_target_property(PROTOBUF_LIBRARY ${ARROW_PROTOBUF_LIBPROTOBUF} IMPORTED_LOCATION)
   message(STATUS "Found libprotobuf: ${PROTOBUF_LIBRARY}")
   message(STATUS "Found protobuf headers: ${PROTOBUF_INCLUDE_DIR}")
+endif()
+
+# ----------------------------------------------------------------------
+# Substrait (required by compute engine)
+
+macro(build_substrait)
+  message("Building Substrait from source")
+
+  set(SUBSTRAIT_PROTOS
+      algebra
+      capabilities
+      extensions/extensions
+      function
+      parameterized_types
+      plan
+      type
+      type_expressions)
+
+  externalproject_add(substrait_ep
+                      CONFIGURE_COMMAND ""
+                      BUILD_COMMAND ""
+                      INSTALL_COMMAND ""
+                      URL ${SUBSTRAIT_SOURCE_URL}
+                      URL_HASH "SHA256=${ARROW_SUBSTRAIT_BUILD_SHA256_CHECKSUM}")
+
+  externalproject_get_property(substrait_ep SOURCE_DIR)
+  set(SUBSTRAIT_LOCAL_DIR ${SOURCE_DIR})
+
+  set(SUBSTRAIT_CPP_DIR "${CMAKE_CURRENT_BINARY_DIR}/substrait_ep-generated")
+  file(MAKE_DIRECTORY ${SUBSTRAIT_CPP_DIR})
+
+  set(SUBSTRAIT_SUPPRESSED_WARNINGS)
+  if(MSVC)
+    # Protobuf generated files trigger some spurious warnings on MSVC.
+
+    # Implicit conversion from uint64_t to uint32_t:
+    list(APPEND SUBSTRAIT_SUPPRESSED_WARNINGS "/wd4244")
+
+    # Missing dll-interface:
+    list(APPEND SUBSTRAIT_SUPPRESSED_WARNINGS "/wd4251")
+  endif()
+
+  set(SUBSTRAIT_SOURCES)
+  set(SUBSTRAIT_PROTO_GEN_ALL)
+  foreach(SUBSTRAIT_PROTO ${SUBSTRAIT_PROTOS})
+    set(SUBSTRAIT_PROTO_GEN "${SUBSTRAIT_CPP_DIR}/substrait/${SUBSTRAIT_PROTO}.pb")
+
+    foreach(EXT h cc)
+      set_source_files_properties("${SUBSTRAIT_PROTO_GEN}.${EXT}"
+                                  PROPERTIES COMPILE_OPTIONS
+                                             "${SUBSTRAIT_SUPPRESSED_WARNINGS}"
+                                             GENERATED TRUE
+                                             SKIP_UNITY_BUILD_INCLUSION TRUE)
+      list(APPEND SUBSTRAIT_PROTO_GEN_ALL "${SUBSTRAIT_PROTO_GEN}.${EXT}")
+    endforeach()
+    add_custom_command(OUTPUT "${SUBSTRAIT_PROTO_GEN}.cc" "${SUBSTRAIT_PROTO_GEN}.h"
+                       COMMAND ${ARROW_PROTOBUF_PROTOC} "-I${SUBSTRAIT_LOCAL_DIR}/proto"
+                               "--cpp_out=${SUBSTRAIT_CPP_DIR}"
+                               "${SUBSTRAIT_LOCAL_DIR}/proto/substrait/${SUBSTRAIT_PROTO}.proto"
+                       DEPENDS ${PROTO_DEPENDS} substrait_ep)
+
+    list(APPEND SUBSTRAIT_SOURCES "${SUBSTRAIT_PROTO_GEN}.cc")
+  endforeach()
+
+  add_custom_target(substrait_gen ALL DEPENDS ${SUBSTRAIT_PROTO_GEN_ALL})
+
+  set(SUBSTRAIT_INCLUDES ${SUBSTRAIT_CPP_DIR} ${PROTOBUF_INCLUDE_DIR})
+
+  add_library(substrait STATIC ${SUBSTRAIT_SOURCES})
+  set_target_properties(substrait PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  target_include_directories(substrait PUBLIC ${SUBSTRAIT_INCLUDES})
+  target_link_libraries(substrait INTERFACE ${ARROW_PROTOBUF_LIBPROTOBUF})
+  add_dependencies(substrait substrait_gen)
+
+  list(APPEND ARROW_BUNDLED_STATIC_LIBS substrait)
+endmacro()
+
+if(ARROW_WITH_SUBSTRAIT)
+  # Currently, we can only build Substrait from source.
+  set(Substrait_SOURCE "BUNDLED")
+  resolve_dependency(Substrait)
 endif()
 
 # ----------------------------------------------------------------------
