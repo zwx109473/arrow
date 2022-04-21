@@ -89,6 +89,7 @@ set(SRC_FILES
     projector.cc
     regex_util.cc
     replace_holder.cc
+    extract_holder.cc
     selection_vector.cc
     tree_expr_builder.cc
     to_date_holder.cc
@@ -235,6 +236,7 @@ add_gandiva_test(internals-test
                  translate_holder_test.cc
                  like_holder_test.cc
                  replace_holder_test.cc
+                 extract_holder_test.cc
                  decimal_type_util_test.cc
                  random_generator_holder_test.cc
                  hash_utils_test.cc

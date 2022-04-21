@@ -1324,7 +1324,8 @@ gdv_int32 locate_utf8_utf8_int32(gdv_int64 context, const char* sub_str,
                                  gdv_int32 sub_str_len, const char* str,
                                  gdv_int32 str_len, gdv_int32 start_pos) {
   if (start_pos < 1) {
-    gdv_fn_context_set_error_msg(context, "Start position must be greater than 0");
+    // To be compatible with spark. If start_pos < 1, just return 0.
+    //gdv_fn_context_set_error_msg(context, "Start position must be greater than 0");
     return 0;
   }
   // TO align with vanilla spark.
