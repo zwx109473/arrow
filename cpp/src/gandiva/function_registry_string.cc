@@ -196,6 +196,11 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
                      utf8(), kResultNullIfNull, "substr_utf8_int64",
                      NativeFunction::kNeedsContext),
 
+      NativeFunction("substr_index", {"substring_index"},
+                     DataTypeVector{utf8() /*input*/, utf8() /*delimiter*/, int32() /*count*/},
+                     utf8(), kResultNullIfNull, "substr_index_utf8_utf8_int32",
+                     NativeFunction::kNeedsContext),
+
       NativeFunction("regexp_replace", {}, DataTypeVector{utf8(), utf8(), utf8()}, utf8(),
                      kResultNullIfNull, "gdv_fn_regexp_replace_utf8_utf8",
                      NativeFunction::kNeedsContext |

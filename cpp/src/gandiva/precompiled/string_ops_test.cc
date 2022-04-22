@@ -930,8 +930,9 @@ TEST(TestStringOps, TestLocate) {
 
   pos = locate_utf8_utf8_int32(ctx_ptr, "bar", 3, "barbar", 6, 0);
   EXPECT_EQ(pos, 0);
-  EXPECT_THAT(ctx.get_error(),
-              ::testing::HasSubstr("Start position must be greater than 0"));
+  // To be compatible with spark, it is allowed to specify 0 as the start position.
+  //EXPECT_THAT(ctx.get_error(),
+  //            ::testing::HasSubstr("Start position must be greater than 0"));
   ctx.Reset();
 
   pos = locate_utf8_utf8_int32(ctx_ptr, "bar", 3, "barbar", 6, 7);
@@ -1092,4 +1093,46 @@ TEST(TestStringOps, TestSplitPart) {
   EXPECT_EQ(std::string(out_str, out_len), "ååçåå");
 }
 
+TEST(TestStringOps, TestSubstr_index) {
+  gandiva::ExecutionContext ctx;
+  uint64_t ctx_ptr = reinterpret_cast<gdv_int64>(&ctx);
+  gdv_int32 out_len = 0;
+  const char* out_str;
+
+  // Count = 0
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, ".", 1, 0, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  // Count = 1
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, ".", 1, 1, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "www");
+
+  // Count = 2
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, ".", 1, 2, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "www.apache");
+
+  // Boundary case.
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, "www", 3, 1, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  // The actual delimiter count in a string is less than the specified count.
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, ".", 1, 3, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "www.apache.org");
+
+  // Negative count.
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, ".", 1, -1, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "org");
+
+  // Negative count.
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, ".", 1, -2, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "apache.org");
+
+  // Delimiter length > 1 for negative count case.
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, "apache", 6, -1, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), ".org");
+
+  // Boundary case for negative count.
+  out_str = substr_index_utf8_utf8_int32(ctx_ptr, "www.apache.org", 14, "org", 3, -1, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+}
 }  // namespace gandiva
