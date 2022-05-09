@@ -34,7 +34,7 @@ namespace gandiva {
             std::make_shared<LiteralNode>(arrow::utf8(), LiteralHolder(pattern), false);
         auto group_index_node =
             std::make_shared<LiteralNode>(arrow::int32(), LiteralHolder(group_index), false);
-        return FunctionNode("regexp_extract", {field, pattern_node, group_index_node}, arrow::boolean());
+        return FunctionNode("regexp_extract", {field, pattern_node, group_index_node}, arrow::utf8());
       }
   };
 

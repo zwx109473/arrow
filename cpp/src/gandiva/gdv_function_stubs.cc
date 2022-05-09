@@ -35,6 +35,7 @@
 #include "gandiva/extract_holder.h"
 #include "gandiva/to_date_holder.h"
 #include "gandiva/translate_holder.h"
+#include "gandiva/substr_index_holder.h"
 
 /// Stub functions that can be accessed from LLVM or the pre-compiled library.
 
@@ -67,6 +68,14 @@ const uint8_t* gdv_fn_translate_utf8_utf8_utf8(int64_t ptr, int64_t holder_ptr, 
   gandiva::TranslateHolder* holder = reinterpret_cast<gandiva::TranslateHolder*>(holder_ptr);
   auto res = (*holder)(context, std::string(text, text_len), std::string(matching_str, matching_str_len),
               std::string(replace_str, replace_str_len), out_len);
+  return res;
+}
+
+const char* gdv_fn_substr_index_utf8_utf8_int32(int64_t ptr, int64_t holder_ptr, const char* input, int in_len,
+                                         const char* delim, int delim_len, int count, int32_t* out_len) {
+  gandiva::ExecutionContext* context = reinterpret_cast<gandiva::ExecutionContext*>(ptr);
+  gandiva::SubstrIndexHolder* holder = reinterpret_cast<gandiva::SubstrIndexHolder*>(holder_ptr);
+  auto res = (*holder)(context, std::string(input, in_len), std::string(delim, delim_len), count, out_len);
   return res;
 }
 
@@ -565,6 +574,19 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   engine->AddGlobalMappingForFunc("gdv_fn_translate_utf8_utf8_utf8", 
                                   types->i8_ptr_type() /*return types*/, args, 
                                   reinterpret_cast<void*>(gdv_fn_translate_utf8_utf8_utf8));
+
+  // gdv_fn_substr_index_utf8_utf8_int32
+  args = {types->i64_type(),      // int64_t ptr
+          types->i64_type(),      // int64_t holder_ptr
+          types->i8_ptr_type(),   // const char* input
+          types->i32_type(),      // int input_len
+          types->i8_ptr_type(),   // const char* delim_str
+          types->i32_type(),      // int delim_str_len
+          types->i32_type(),      // int count
+          types->i32_ptr_type()}; // int* out_len
+  engine->AddGlobalMappingForFunc("gdv_fn_substr_index_utf8_utf8_int32",
+                                  types->i8_ptr_type() /*return types*/, args, 
+                                  reinterpret_cast<void*>(gdv_fn_substr_index_utf8_utf8_int32));
 
   // gdv_fn_like_utf8_utf8
   args = {types->i64_type(),     // int64_t ptr

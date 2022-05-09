@@ -33,6 +33,7 @@
 #include "gandiva/extract_holder.h"
 #include "gandiva/to_date_holder.h"
 #include "gandiva/translate_holder.h"
+#include "gandiva/substr_index_holder.h"
 
 namespace gandiva {
 
@@ -73,7 +74,8 @@ class FunctionHolderRegistry {
         {"rand", LAMBDA_MAKER(RandomGeneratorHolder)},
         {"regexp_replace", LAMBDA_MAKER(ReplaceHolder)},
         {"regexp_extract", LAMBDA_MAKER(ExtractHolder)},
-        {"translate", LAMBDA_MAKER(TranslateHolder)}
+        {"translate", LAMBDA_MAKER(TranslateHolder)},
+        {"substr_index", LAMBDA_MAKER(SubstrIndexHolder)}
     };
     return maker_map;
   }
