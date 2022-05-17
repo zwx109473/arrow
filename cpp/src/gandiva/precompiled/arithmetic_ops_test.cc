@@ -61,6 +61,31 @@ TEST(TestArithmeticOps, TestMod) {
   EXPECT_FALSE(context.has_error());
 }
 
+TEST(TestArithmeticOps, TestPMod) {
+  bool out_valid = false;
+  EXPECT_EQ(pmod_int8_int8(10, true, 3, true, &out_valid), 1);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(pmod_int16_int16(10, true, 3, true, &out_valid), 1);
+  EXPECT_EQ(pmod_int32_int32(10, true, 3, true, &out_valid), 1);
+  // Negative input.
+  EXPECT_EQ(pmod_int32_int32(-10, true, 3, true, &out_valid), 2);
+  EXPECT_EQ(pmod_int32_int32(-5, true, -3, true, &out_valid), -2);
+
+  EXPECT_FLOAT_EQ(pmod_float32_float32(0.5, true, 0.3, true, &out_valid), 0.2);
+  EXPECT_FLOAT_EQ(pmod_float32_float32(-1.1, true, 2, true, &out_valid), 0.9);
+
+  EXPECT_DOUBLE_EQ(pmod_float64_float64(0.5, true, 0.3, true, &out_valid), 0.2);
+  EXPECT_DOUBLE_EQ(pmod_float64_float64(-1.1, true, 2, true, &out_valid), 0.9);
+
+  // Not valid cases.
+  pmod_int32_int32(0, false, 3, false, &out_valid);
+  EXPECT_EQ(out_valid, false);
+  pmod_int32_int32(10, true, 0, true, &out_valid);
+  EXPECT_EQ(out_valid, false);
+  pmod_float64_float64(-1.1, true, 0.0, true, &out_valid);
+  EXPECT_EQ(out_valid, false);
+}
+
 TEST(TestArithmeticOps, TestDivide) {
   gandiva::ExecutionContext context;
   EXPECT_EQ(divide_int64_int64(reinterpret_cast<gdv_int64>(&context), 10, 0), 0);

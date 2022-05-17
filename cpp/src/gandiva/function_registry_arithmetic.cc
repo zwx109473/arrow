@@ -76,6 +76,13 @@ std::vector<NativeFunction> GetArithmeticFunctionRegistry() {
                      decimal128(), kResultNullInternal,
                      "castDECIMALNullOnOverflow_decimal128"),
 
+      BINARY_SYMMETRIC_SAFE_INTERNAL_NULL(pmod, {}, int8),
+      BINARY_SYMMETRIC_SAFE_INTERNAL_NULL(pmod, {}, int16),
+      BINARY_SYMMETRIC_SAFE_INTERNAL_NULL(pmod, {}, int32),
+      BINARY_SYMMETRIC_SAFE_INTERNAL_NULL(pmod, {}, int64),
+      BINARY_SYMMETRIC_SAFE_INTERNAL_NULL(pmod, {}, float32),
+      BINARY_SYMMETRIC_SAFE_INTERNAL_NULL(pmod, {}, float64),
+
       UNARY_SAFE_NULL_IF_NULL(castDATE, {}, int64, date64),
       UNARY_SAFE_NULL_IF_NULL(castDATE, {}, int32, date32),
       UNARY_SAFE_NULL_IF_NULL(castDATE, {}, date32, date64),

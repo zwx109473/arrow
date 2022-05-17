@@ -84,6 +84,13 @@ typedef std::unordered_map<const FunctionSignature*, const NativeFunction*, KeyH
                  DataTypeVector{TYPE(), TYPE()}, TYPE(), kResultNullIfNull, \
                  ARROW_STRINGIFY(NAME##_##TYPE##_##TYPE))
 
+// A bit like the above, except that kResultNullInternal is added.
+#define BINARY_SYMMETRIC_SAFE_INTERNAL_NULL(NAME, ALIASES, TYPE)  \
+  NativeFunction(#NAME, std::vector<std::string> ALIASES,         \
+                 DataTypeVector{TYPE(), TYPE()}, TYPE(),          \
+                 kResultNullInternal,                             \
+                 ARROW_STRINGIFY(NAME##_##TYPE##_##TYPE))
+
 // Binary functions that :
 // - have the same input type for both params
 // - NULL handling is of type NULL_IINTERNAL
