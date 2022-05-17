@@ -180,7 +180,8 @@ public final class ArrowBuf implements AutoCloseable {
    */
   public long readableBytes() {
     Preconditions.checkState(writerIndex >= readerIndex,
-            "Writer index cannot be less than reader index");
+        String.format("Writer index cannot be less than reader index: writer index: %d, reader index: %d",
+            writerIndex, readerIndex));
     return writerIndex - readerIndex;
   }
 
@@ -1152,6 +1153,9 @@ public final class ArrowBuf implements AutoCloseable {
    * @return this ArrowBuf
    */
   public ArrowBuf writerIndex(long writerIndex) {
+    if (writerIndex < 0) {
+      throw new RuntimeException("Negative writer index specified: " + writerIndex);
+    }
     this.writerIndex = writerIndex;
     return this;
   }
