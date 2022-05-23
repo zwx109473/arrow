@@ -1522,4 +1522,46 @@ const char* binary_string(gdv_int64 context, const char* text, gdv_int32 text_le
   return ret;
 }
 
+// This function is consistent with JDK URLDecoder to parse a given url.
+FORCE_INLINE
+const char* url_decoder(gdv_int64 context, const char* input, gdv_int32 input_len, gdv_int32* out_len) {
+  if (input_len == 0) {
+    *out_len = 0;
+    return "";
+  }
+  int index = 0;
+  char ret[input_len];
+  int i = 0;
+  while (i < input_len) {
+    if (input[i] == '+') {
+      ret[index++] = ' ';
+      i++;
+    } else if (input[i] == '%') {
+      char c = input[i];
+      while ((i + 2) < input_len && c == '%') {
+        char hex_encoded_char = (char)(strtol(input + i + 1, nullptr, 16));
+        ret[index++] = hex_encoded_char;
+        i = i + 3;
+        if (i < input_len) {
+          c = input[i];
+        }
+      }
+      // Illegal input. Just return the input, consistent with user's handling.
+      if (i < input_len && c == '%') {
+        gdv_fn_context_set_error_msg(context, "url_decoder: Incomplete trailing escape (%) pattern");
+        *out_len = input_len;
+        return input;
+      }
+    } else {
+      ret[index++] = input[i];
+      i++;
+    }
+  }
+
+  *out_len = index;
+  char* out_str = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, *out_len));
+  memcpy(out_str, ret, *out_len);
+  return out_str;
+}
+
 }  // extern "C"

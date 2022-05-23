@@ -317,6 +317,10 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
 
       NativeFunction("split_part", {}, DataTypeVector{utf8(), utf8(), int32()}, utf8(),
                      kResultNullIfNull, "split_part",
+                     NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
+
+      NativeFunction("url_decoder", {}, DataTypeVector{utf8()}, utf8(),
+                     kResultNullIfNull, "url_decoder",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)};
 
   return string_fn_registry_;
