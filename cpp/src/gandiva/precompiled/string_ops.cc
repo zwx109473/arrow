@@ -1429,7 +1429,7 @@ const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len,
                        const char* delimiter, gdv_int32 delim_len, gdv_int32 index,
                        gdv_int32* out_len) {
   *out_len = 0;
-  if (index < 1) {
+  if (index < 0) {
     char error_message[100];
     snprintf(error_message, sizeof(error_message),
              "Index in split_part must be positive, value provided was %d", index);
@@ -1443,7 +1443,7 @@ const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len,
     return text;
   }
 
-  int i = 0, match_no = 1;
+  int i = 0, match_no = 0;
 
   while (i < text_len) {
     // find the position where delimiter matched for the first time
