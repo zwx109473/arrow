@@ -72,6 +72,7 @@ set(ARROW_THIRDPARTY_DEPENDENCIES
     xsimd
     ZLIB
     zstd
+    isal
     FastPFOR)
 
 # TODO(wesm): External GTest shared libraries are not currently
@@ -605,6 +606,14 @@ else()
   set_urls(
     ZLIB_SOURCE_URL "https://zlib.net/fossils/zlib-${ARROW_ZLIB_BUILD_VERSION}.tar.gz"
     "https://github.com/ursa-labs/thirdparty/releases/download/latest/zlib-${ARROW_ZLIB_BUILD_VERSION}.tar.gz"
+    )
+endif()
+
+if(DEFINED ENV{ARROW_ISAL_URL})
+  set(ISAL_SOURCE_URL "$ENV{ARROW_ISAL_URL}")
+else()
+  set_urls(
+    ISAL_SOURCE_URL "https://github.com/intel/isa-l/archive/refs/tags/v2.30.0.tar.gz"
     )
 endif()
 
@@ -1986,6 +1995,7 @@ macro(build_zlib)
                         PROPERTIES IMPORTED_LOCATION ${ZLIB_LIBRARIES}
                                    INTERFACE_INCLUDE_DIRECTORIES ${ZLIB_INCLUDE_DIRS})
 
+
   add_dependencies(toolchain zlib_ep)
   add_dependencies(ZLIB::ZLIB zlib_ep)
 
@@ -2119,6 +2129,43 @@ macro(build_zstd)
 
   list(APPEND ARROW_BUNDLED_STATIC_LIBS zstd::libzstd)
 endmacro()
+
+if(ARROW_WITH_ISAL)
+  message(STATUS "Building isal from source")
+  set(ISAL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/isal_ep-install")
+  set(ISAL_INCLUDE_DIR "${ISAL_PREFIX}/include")
+  set(ISAL_STATIC_LIB "${ISAL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libisal.a")
+
+  set(ISAL_CONFIGURE_ARGS
+      "--prefix=/"
+      "AR=${CMAKE_AR}"
+      "RANLIB=${CMAKE_RANLIB}"
+      "CC=${CMAKE_C_COMPILER}"
+      "CXX=${CMAKE_CXX_COMPILER}"
+      "CFLAGS=-fPIC -O3"
+      "CXXFLAGS=-fPIC -O3")
+  set(ISAL_BUILD_COMMAND ${MAKE} ${MAKE_BUILD_ARGS})
+  ExternalProject_Add(isal_ep
+                      PREFIX isal_ep
+                      UPDATE_COMMAND "./autogen.sh"
+                      CONFIGURE_COMMAND "./configure" ${ISAL_CONFIGURE_ARGS}
+                      BUILD_COMMAND ${ISAL_BUILD_COMMAND}
+                      INSTALL_COMMAND ${MAKE} install DESTDIR=${ISAL_PREFIX}
+                      BUILD_IN_SOURCE 1
+                      URL ${ISAL_SOURCE_URL}
+  )
+  file(MAKE_DIRECTORY "${ISAL_INCLUDE_DIR}")
+  add_library(ISAL::isal STATIC IMPORTED)
+  set_target_properties(
+    ISAL::isal
+    PROPERTIES IMPORTED_LOCATION "${ISAL_STATIC_LIB}" INTERFACE_INCLUDE_DIRECTORIES
+               "${ISAL_INCLUDE_DIR}")
+  add_dependencies(toolchain isal_ep)
+  add_dependencies(ISAL::isal isal_ep)
+  list(APPEND ARROW_BUNDLED_STATIC_LIBS ISAL::isal)
+  include_directories(SYSTEM ${ISAL_INCLUDE_DIR})
+endif()
+
 
 if(ARROW_WITH_ZSTD)
   resolve_dependency(zstd)

@@ -286,7 +286,11 @@ endif()
 
 if(ARROW_WITH_ZLIB)
   add_definitions(-DARROW_WITH_ZLIB)
-  list(APPEND ARROW_SRCS util/compression_zlib.cc)
+  if(ARROW_WITH_ISAL)
+    list(APPEND ARROW_SRCS util/compression_zlib_isal.cc)
+  else()
+    list(APPEND ARROW_SRCS util/compression_zlib.cc)
+  endif()
 endif()
 
 if(ARROW_WITH_ZSTD)
@@ -298,6 +302,11 @@ if(ARROW_WITH_FASTPFOR)
   add_definitions(-DARROW_WITH_FASTPFOR)
   list(APPEND ARROW_SRCS util/compression_fastpfor.cc)
 endif()
+
+if(ARROW_WITH_ISAL)
+  add_definitions(-DARROW_WITH_ISAL)
+endif()
+
 
 if(ARROW_WITH_QAT)
   add_definitions(-DARROW_WITH_QAT)
