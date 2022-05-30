@@ -1115,6 +1115,18 @@ TEST(TestStringOps, TestURLDecoder) {
   EXPECT_EQ(out_len, 7);
   EXPECT_EQ(std::string(out_str, out_len), "AaBbC$Z");
 
+  out_str = url_decoder(ctx_ptr, "AaBbC%25FF", 10, &out_len);
+  EXPECT_EQ(out_len, 8);
+  EXPECT_EQ(std::string(out_str, out_len), "AaBbC%FF");
+
+  out_str = url_decoder(ctx_ptr, "AaBbC%2EAA", 10, &out_len);
+  EXPECT_EQ(out_len, 8);
+  EXPECT_EQ(std::string(out_str, out_len), "AaBbC.AA");
+
+  out_str = url_decoder(ctx_ptr, "AaBbC%2FB", 9, &out_len);
+  EXPECT_EQ(out_len, 7);
+  EXPECT_EQ(std::string(out_str, out_len), "AaBbC/B");
+
   // Illegal input.
   out_str = url_decoder(ctx_ptr, "AaBbC%5", 7, &out_len);
   EXPECT_EQ(out_len, 7);
@@ -1122,6 +1134,12 @@ TEST(TestStringOps, TestURLDecoder) {
   EXPECT_THAT(
       ctx.get_error(),
       ::testing::HasSubstr("url_decoder: Incomplete trailing escape (%) pattern"));
+
+  std::string s = "https%3A%2F%2Ftts%2Exxx%2Ecom";
+  out_str = url_decoder(ctx_ptr, s.c_str(), s.length(), &out_len);
+  std::string exp_str = "https://tts.xxx.com";
+  EXPECT_EQ(out_len, exp_str.length());
+  EXPECT_EQ(std::string(out_str, out_len), exp_str);
 }
 
 }  // namespace gandiva

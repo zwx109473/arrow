@@ -1539,7 +1539,11 @@ const char* url_decoder(gdv_int64 context, const char* input, gdv_int32 input_le
     } else if (input[i] == '%') {
       char c = input[i];
       while ((i + 2) < input_len && c == '%') {
-        char hex_encoded_char = (char)(strtol(input + i + 1, nullptr, 16));
+        char hex[3];
+        hex[0] = input[i + 1];
+        hex[1] = input[i + 2];
+        hex[2] = '\0';
+        char hex_encoded_char = (char)(strtol(hex, nullptr, 16));
         ret[index++] = hex_encoded_char;
         i = i + 3;
         if (i < input_len) {
