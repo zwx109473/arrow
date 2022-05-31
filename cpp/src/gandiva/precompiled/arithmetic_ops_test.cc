@@ -86,6 +86,13 @@ TEST(TestArithmeticOps, TestPMod) {
   EXPECT_EQ(out_valid, false);
 }
 
+TEST(TestArithmeticOps, TestCompare) {
+  EXPECT_EQ(equal_with_nan_float32_float32(NAN, 1.0/0.0), false);
+  EXPECT_EQ(equal_with_nan_float32_float32(1.0/0.0, NAN), false);
+  EXPECT_EQ(not_equal_with_nan_float32_float32(NAN, 1.0/0.0), true);
+  EXPECT_EQ(not_equal_with_nan_float32_float32(1.0/0.0, NAN), true);
+}
+
 TEST(TestArithmeticOps, TestDivide) {
   gandiva::ExecutionContext context;
   EXPECT_EQ(divide_int64_int64(reinterpret_cast<gdv_int64>(&context), 10, 0), 0);

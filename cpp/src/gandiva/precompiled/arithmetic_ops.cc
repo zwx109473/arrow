@@ -147,6 +147,8 @@ NUMERIC_DATE_TYPES(BINARY_RELATIONAL, greater_than_or_equal_to, >=)
 #undef BINARY_RELATIONAL
 
 // Relational binary fns : left, right params are same, return is bool.
+// To algin with spark, NAN is treated as infinity. The exception case
+// is that the other is infinity.
 #define BINARY_RELATIONAL_NAN(NAME, TYPE, OP)                       \
   FORCE_INLINE                                                      \
   bool NAME##_##TYPE##_##TYPE(gdv_##TYPE left, gdv_##TYPE right) {  \
@@ -156,8 +158,14 @@ NUMERIC_DATE_TYPES(BINARY_RELATIONAL, greater_than_or_equal_to, >=)
     if (left_is_nan && right_is_nan) {                              \
       return infinity OP infinity;                                  \
     } else if (left_is_nan) {                                       \
+      if (isinf(right)) {                                           \
+        return NAN OP right;                                        \
+      }                                                             \
       return infinity OP right;                                     \
     } else if (right_is_nan) {                                      \
+      if (isinf(left)) {                                            \
+        return left OP NAN;                                         \
+      }                                                             \
       return left OP infinity;                                      \
     }                                                               \
     return left OP right;                                           \

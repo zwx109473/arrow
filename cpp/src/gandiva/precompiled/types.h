@@ -154,6 +154,9 @@ gdv_int64 pmod_int64_int64(gdv_int64 in1, bool in1_valid, gdv_int64 in2, bool in
 gdv_float32 pmod_float32_float32(gdv_float32 in1, bool in1_valid, gdv_float32 in2, bool in2_valid, bool* out_valid);
 gdv_float64 pmod_float64_float64(gdv_float64 in1, bool in1_valid, gdv_float64 in2, bool in2_valid, bool* out_valid);
 
+bool equal_with_nan_float32_float32(gdv_float32 in1, gdv_float32 in2);
+bool not_equal_with_nan_float32_float32(gdv_float32 in1, gdv_float32 in2);
+
 gdv_int64 divide_int64_int64(gdv_int64 context, gdv_int64 in1, gdv_int64 in2);
 
 gdv_int64 div_int64_int64(gdv_int64 context, gdv_int64 in1, gdv_int64 in2);
