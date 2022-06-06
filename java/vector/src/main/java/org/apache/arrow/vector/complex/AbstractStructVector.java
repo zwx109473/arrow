@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.util.Preconditions;
+import org.apache.arrow.util.VisibleForTesting;
 import org.apache.arrow.vector.BitVectorHelper;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.ValueVector;
@@ -229,7 +230,8 @@ public abstract class AbstractStructVector extends AbstractContainerVector {
     return typeify(f, clazz);
   }
 
-  protected ValueVector add(String childName, FieldType fieldType) {
+  @VisibleForTesting
+  public ValueVector add(String childName, FieldType fieldType) {
     FieldVector vector = fieldType.createNewSingleVector(childName, allocator, callBack);
     putChild(childName, vector);
     if (callBack != null) {
