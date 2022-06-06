@@ -32,6 +32,7 @@
 #include "gandiva/precompiled/types.h"
 #include "gandiva/random_generator_holder.h"
 #include "gandiva/replace_holder.h"
+#include "gandiva/rlike_holder.h"
 #include "gandiva/extract_holder.h"
 #include "gandiva/to_date_holder.h"
 #include "gandiva/translate_holder.h"
@@ -77,6 +78,12 @@ const char* gdv_fn_substr_index_utf8_utf8_int32(int64_t ptr, int64_t holder_ptr,
   gandiva::SubstrIndexHolder* holder = reinterpret_cast<gandiva::SubstrIndexHolder*>(holder_ptr);
   auto res = (*holder)(context, std::string(input, in_len), std::string(delim, delim_len), count, out_len);
   return res;
+}
+
+bool gdv_fn_rlike_utf8_utf8(int64_t ptr, const char* data, int data_len,
+                           const char* pattern, int pattern_len) {
+  gandiva::RLikeHolder* holder = reinterpret_cast<gandiva::RLikeHolder*>(ptr);
+  return (*holder)(std::string(data, data_len));
 }
 
 bool gdv_fn_like_utf8_utf8(int64_t ptr, const char* data, int data_len,
@@ -587,6 +594,17 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   engine->AddGlobalMappingForFunc("gdv_fn_substr_index_utf8_utf8_int32",
                                   types->i8_ptr_type() /*return types*/, args, 
                                   reinterpret_cast<void*>(gdv_fn_substr_index_utf8_utf8_int32));
+
+  // gdv_fn_rlike_utf8_utf8
+  args = {types->i64_type(),     // int64_t ptr
+          types->i8_ptr_type(),  // const char* data
+          types->i32_type(),     // int data_len
+          types->i8_ptr_type(),  // const char* pattern
+          types->i32_type()};    // int pattern_len
+
+  engine->AddGlobalMappingForFunc("gdv_fn_rlike_utf8_utf8",
+                                  types->i1_type() /*return_type*/, args,
+                                  reinterpret_cast<void*>(gdv_fn_rlike_utf8_utf8));
 
   // gdv_fn_like_utf8_utf8
   args = {types->i64_type(),     // int64_t ptr

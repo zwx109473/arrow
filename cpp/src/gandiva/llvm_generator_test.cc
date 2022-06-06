@@ -45,6 +45,7 @@ TEST_F(TestLLVMGenerator, VerifyPCFunctions) {
 
   llvm::Module* module = generator->module();
   for (auto& iter : registry_) {
+    std::cout << iter.pc_name() << std::endl;
     EXPECT_NE(module->getFunction(iter.pc_name()), nullptr);
   }
 }

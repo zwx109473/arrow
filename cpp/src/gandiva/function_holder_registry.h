@@ -30,6 +30,7 @@
 #include "gandiva/node.h"
 #include "gandiva/random_generator_holder.h"
 #include "gandiva/replace_holder.h"
+#include "gandiva/rlike_holder.h"
 #include "gandiva/extract_holder.h"
 #include "gandiva/to_date_holder.h"
 #include "gandiva/translate_holder.h"
@@ -68,6 +69,7 @@ class FunctionHolderRegistry {
     static map_type maker_map = {
         {"like", LAMBDA_MAKER(LikeHolder)},
         {"ilike", LAMBDA_MAKER(LikeHolder)},
+        {"rlike", LAMBDA_MAKER(RLikeHolder)},
         {"get_json_object", LAMBDA_MAKER(JsonHolder)},
         {"to_date", LAMBDA_MAKER(ToDateHolder)},
         {"random", LAMBDA_MAKER(RandomGeneratorHolder)},

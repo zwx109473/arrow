@@ -82,6 +82,7 @@ set(SRC_FILES
     hash_utils.cc
     llvm_generator.cc
     llvm_types.cc
+    rlike_holder.cc
     like_holder.cc
     json_holder.cc
     translate_holder.cc
@@ -235,6 +236,7 @@ add_gandiva_test(internals-test
                  simple_arena_test.cc
                  json_holder_test.cc
                  translate_holder_test.cc
+                 rlike_holder_test.cc
                  like_holder_test.cc
                  replace_holder_test.cc
                  extract_holder_test.cc

@@ -121,7 +121,7 @@ if(ARROW_CSV)
 endif()
 
 if(ARROW_ORC)
-  add_arrow_dataset_test(file_orc_test)
+  #add_arrow_dataset_test(file_orc_test)
 endif()
 
 if(ARROW_PARQUET)
