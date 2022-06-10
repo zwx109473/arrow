@@ -339,7 +339,7 @@ def test_compression_level(use_legacy_dataset):
     # Uncompressed, snappy, lz4 and lzo do not support specifying a compression
     # level.
     # GZIP (zlib) allows for specifying a compression level but as of up
-    # to version 1.2.11 the valid range is [-1, 9].
+    # to version 1.2.12 the valid range is [-1, 9].
     invalid_combinations = [("snappy", 4), ("lz4", 5), ("gzip", -1337),
                             ("None", 444), ("lzo", 14)]
     buf = io.BytesIO()
