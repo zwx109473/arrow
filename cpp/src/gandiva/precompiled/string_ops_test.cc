@@ -1142,4 +1142,70 @@ TEST(TestStringOps, TestURLDecoder) {
   EXPECT_EQ(std::string(out_str, out_len), exp_str);
 }
 
+TEST(TestStringOps, TestConv) {
+  gandiva::ExecutionContext ctx;
+  uint64_t ctx_ptr = reinterpret_cast<gdv_int64>(&ctx);
+  gdv_int32 out_len = 0;
+  const char* out_str;
+  bool out_valid;
+
+  // 10-base to 2-base
+  out_str = conv(ctx_ptr, "4", 1, true, 10, true, 2, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 3);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len), "100");
+
+  // 2-bae to 10-base
+  out_str = conv(ctx_ptr, "110", 3, true, 2, true, 10, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(std::string(out_str, out_len), "6");
+
+  // 10-base to 16-base
+  out_str = conv(ctx_ptr, "15", 2, true, 10, true, 16, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(std::string(out_str, out_len), "F");
+
+  // 36-base to 16-base
+  out_str = conv(ctx_ptr, "big", 3, true, 36, true, 16, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 4);
+  EXPECT_EQ(std::string(out_str, out_len), "3A48");
+
+  // 36-base to 16-base.
+  std::string input = "9223372036854775807";
+  out_str = conv(ctx_ptr, input.c_str(), input.length(), true, 36, true, 16, true, &out_valid, &out_len);
+  std::string expected_str = "FFFFFFFFFFFFFFFF";
+  EXPECT_EQ(out_len, expected_str.length());
+  EXPECT_EQ(std::string(out_str, out_len), expected_str);
+
+  // Space is contained in input string.
+  out_str = conv(ctx_ptr, " 15 ", 2, true, 10, true, 16, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(std::string(out_str, out_len), "F");
+
+  // Negative input and negative to_base.
+  out_str = conv(ctx_ptr, "-15", 3, true, 10, true, -16, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 2);
+  EXPECT_EQ(std::string(out_str, out_len), "-F");
+
+  // Negative input and positive to_base
+  out_str = conv(ctx_ptr, "-15", 3, true, 10, true, 16, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 16);
+  EXPECT_EQ(std::string(out_str, out_len), "FFFFFFFFFFFFFFF1");
+
+  // Negative input and negative base.
+  out_str = conv(ctx_ptr, "-10", 3, true, 16, true, -10, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 3);
+  EXPECT_EQ(std::string(out_str, out_len), "-16");
+
+  // If there is an invalid digit in the number, the longest
+  // valid prefix should be converted.
+  out_str = conv(ctx_ptr, "11abc", 5, true, 10, true, 16, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(std::string(out_str, out_len), "B");
+
+  // Should return null for Empty input.
+  out_str = conv(ctx_ptr, "", 0, true, 10, true, 16, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, false);
+}
+
 }  // namespace gandiva

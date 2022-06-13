@@ -325,6 +325,10 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
 
       NativeFunction("url_decoder", {}, DataTypeVector{utf8()}, utf8(),
                      kResultNullIfNull, "url_decoder",
+                     NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
+
+      NativeFunction("conv", {}, DataTypeVector{utf8(), int32(), int32()}, utf8(),
+                     kResultNullInternal, "conv",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)};
 
   return string_fn_registry_;

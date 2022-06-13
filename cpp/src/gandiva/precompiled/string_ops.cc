@@ -1568,4 +1568,80 @@ const char* url_decoder(gdv_int64 context, const char* input, gdv_int32 input_le
   return out_str;
 }
 
+FORCE_INLINE
+const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool in1_valid,
+                 gdv_int32 from_base, bool in2_valid, gdv_int32 to_base, bool in3_valid,
+                 bool* out_valid, gdv_int32* out_len) {
+  if (!in1_valid || !in2_valid || !in3_valid || input_len == 0) {
+    *out_len = 0;
+    *out_valid = false;
+    return ""; 
+  }
+
+  // Consistent with spark, only support base belonging to [2, 36].
+  const int MIN_BASE = 2;
+  const int MAX_BASE = 36;
+  if (from_base < MIN_BASE || from_base > MAX_BASE ||
+      fabs(to_base) < MIN_BASE || fabs(to_base) > MAX_BASE) {
+    *out_len = 0;
+    *out_valid = false;
+    return "";
+  } 
+
+  from_base = from_base < 0 ? -from_base : from_base;
+  bool is_negative_input;
+  unsigned long unsigned_decimal_value;
+  if (input[0] == '-') {
+    is_negative_input = true;
+    unsigned_decimal_value = strtoul(input + 1, nullptr, from_base);
+  } else {
+    is_negative_input = false;
+    unsigned_decimal_value = strtoul(input, nullptr, from_base);
+  }
+
+  bool has_negative_mark = false;
+  if (is_negative_input && to_base < 0) {
+    has_negative_mark = true;
+  } else if (is_negative_input && to_base > 0) {
+    // Use the max value for 64-bit to convert it to positive.
+    unsigned_decimal_value = strtoul("FFFFFFFFFFFFFFFF", nullptr, 16) - unsigned_decimal_value + 1;
+  }
+  to_base = to_base < 0 ? -to_base : to_base;
+
+  char reverse_ret[64];
+  int i = 0;
+  while (unsigned_decimal_value > 0) {
+    int remainder = unsigned_decimal_value % to_base;
+    char c;
+    if (remainder < 10) {
+      c = (char)(remainder + (int)'0');
+    } else { 
+      c = (char)(remainder - 10 + (int)'A');
+    }
+    reverse_ret[i] = c;
+    i++;
+    unsigned_decimal_value = unsigned_decimal_value / to_base;
+  }
+  if (has_negative_mark) {
+    reverse_ret[i] = '-';
+    i++;
+  }
+  *out_len = i;
+  char ret[*out_len];
+  for (int i = 0; i < *out_len; i++) {
+    ret[i] = reverse_ret[*out_len - i - 1];
+  }
+
+  char* out_str = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, *out_len));
+  if (ret == nullptr) {
+    gdv_fn_context_set_error_msg(context, "Could not allocate memory for output string");
+    *out_len = 0;
+    *out_valid = false;
+    return "";
+  }
+  memcpy(out_str, ret, *out_len);
+  *out_valid = true;
+  return out_str;
+}
+
 }  // extern "C"
