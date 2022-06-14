@@ -1643,5 +1643,13 @@ const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool
   *out_valid = true;
   return out_str;
 }
-
+  
+// This function is consistent with JDK IsEmpty.
+FORCE_INLINE
+const bool is_empty(const char* input, gdv_int32 input_len) {
+  if (input_len == 0 || input == nullptr) {
+    return true;
+  }
+ return false;
+}
 }  // extern "C"
