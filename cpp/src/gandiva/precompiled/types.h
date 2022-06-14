@@ -520,5 +520,5 @@ const char* url_decoder(gdv_int64 context, const char* input, gdv_int32 input_le
 const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool in1_valid,
                  gdv_int32 from_base, bool in2_valid, gdv_int32 to_base, bool in3_valid,
                  bool* out_valid, gdv_int32* out_len);
-
+const bool is_empty(const char* input, gdv_int32 input_len);
 }  // extern "C"
