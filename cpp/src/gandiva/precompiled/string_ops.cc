@@ -1652,4 +1652,5 @@ const bool is_empty(const char* input, gdv_int32 input_len) {
   }
  return false;
 }
+  
 }  // extern "C"
